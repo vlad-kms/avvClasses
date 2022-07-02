@@ -1,6 +1,6 @@
 Class Logger {
-    [int32]$LogLevel
-    [boolean]$Append
+    [int32]$logLevel
+    [boolean]$isAppend
     [string]$LogFile
     [int32]$TW
     [boolean]$FlagExpandTab
@@ -42,19 +42,19 @@ Class Logger {
         return $Result
     }
 
-    [void]InitDefault([int]$LogLevel) {
+    [void]InitDefault([int]$logLevel) {
         $this.FlagExpandTab = $True
         $this.TW       = 4
-        $this.Append   = $True
-        $this.LogLevel = $LogLevel
+        $this.isAppend = $True
+        $this.logLevel = $logLevel
         $this.LogFile  = ""
     }
 
     [string]InitFile ([String]$LogFile) {
-        return [logger]::InitFile($LogFile, $this.Append)
+        return [logger]::InitFile($LogFile, $this.isAppend)
     }
 
-    static [string]InitFile ([String]$LogFile, [boolean]$Append) {
+    static [string]InitFile ([String]$LogFile, [boolean]$isAppend) {
         $Result=$LogFile
         if ( !$LogFile) {
             return $Result
@@ -93,7 +93,7 @@ Class Logger {
             }
         } ### if ( Test-Path $Result -PathType Any ) {
         if ( $Result ) {
-            if ( !($Append) -or !(Test-Path $Result) ) {
+            if ( !($isAppend) -or !(Test-Path $Result) ) {
                 New-Item $Result -ItemType File -Force | Out-Null
             }
             else {
@@ -111,38 +111,38 @@ Class Logger {
         }
         else {
             #$this.LogFile="";
-            $this.LogLevel=-1
+            $this.logLevel=-1
         }
     }
 
-    Logger ([String]$LogFile, [int]$LogLevel){
-        $this.InitDefault($LogLevel)
+    Logger ([String]$LogFile, [int]$logLevel){
+        $this.InitDefault($logLevel)
         $fl = $this.InitFile($LogFile)
         if ( $fl ) {
             $this.LogFile=$fl
         }
         else {
             #$this.LogFile="";
-            $this.LogLevel=-1
+            $this.logLevel=-1
         }
     }
 
-    Logger ([String]$LogFile, [int]$LogLevel, [boolean]$Append){
-        $this.InitDefault($LogLevel)
-        $this.Append = $Append
+    Logger ([String]$LogFile, [int]$logLevel, [boolean]$isAppend){
+        $this.InitDefault($logLevel)
+        $this.isAppend = $isAppend
 
         $fl = $this.InitFile($LogFile)
         if ( $fl ) {
             $this.LogFile=$fl
         }
         else {
-            $this.LogLevel=-1
+            $this.logLevel=-1
         }
     }
 
-    Logger ([String]$LogFile, [int]$LogLevel, [boolean]$Append, [int32]$Tabwidth){
-        $this.InitDefault($LogLevel)
-        $this.Append = $Append
+    Logger ([String]$LogFile, [int]$logLevel, [boolean]$isAppend, [int32]$Tabwidth){
+        $this.InitDefault($logLevel)
+        $this.isAppend = $isAppend
         $this.TW = $Tabwidth
 
         $fl = $this.InitFile($LogFile)
@@ -150,12 +150,12 @@ Class Logger {
             $this.LogFile=$fl
         }
         else {
-            $this.LogLevel=-1
+            $this.logLevel=-1
         }
     }
 
     static [void] Log ([string]$FileName, [string]$Msg, [int32]$TabCount, [int32]$UseDate,
-                       [int32]$Log, [int32]$LogLevel, [boolean]$Always=$False, [boolean]$FlagExpandTab,
+                       [int32]$Log, [int32]$logLevel, [boolean]$Always=$False, [boolean]$FlagExpandTab,
                        [int32]$TabWidth, [string]$ClassMSG){
         #$UseDate=0,
             <#
@@ -172,7 +172,7 @@ Class Logger {
                 =все отстальное, нет даты в начале строки, но по длине 'дата:TAB-' забито пробелами, TabCount игнорируется
             #>
         if ( !$Msg) { return }
-        if ( ($LogLevel -le 0) -or ( $Log -le 0) ){ return }
+        if ( ($logLevel -le 0) -or ( $Log -le 0) ){ return }
         if (!$FileName -or ($FileName -eq '') ) { return }
         $PL = Split-Path $FileName -Parent
         if (! (Test-Path $PL -PathType Container) ) {
@@ -183,7 +183,7 @@ Class Logger {
         } else {
             $StrLevel=""
         }
-        if ( ($Log -le $LogLevel) -or $Always ) {
+        if ( ($Log -le $logLevel) -or $Always ) {
             $dt1=(Get-Date -Format "dd.MM.yyyy HH:mm:ss")
             $dt= $dt1 + ":`t"
             $dtspace="".PadLeft($dt1.Length, " ") + " `t"
@@ -266,11 +266,11 @@ Class Logger {
                 =все отстальное, нет даты в начале строки, но по длине 'дата:TAB-' забито пробелами, TabCount игнорируется
             #>
 
-        [logger]::Log($this.LogFile, $Msg, $TabCount, $UseDate, $Log, $this.LogLevel, $Always, $this.FlagExpandTab, $this.TW, $ClassMSG)
+        [logger]::Log($this.LogFile, $Msg, $TabCount, $UseDate, $Log, $this.logLevel, $Always, $this.FlagExpandTab, $this.TW, $ClassMSG)
 <#
         $FileName = $this.LogFile
         if ( !$Msg) { return }
-        if ( ($this.LogLevel -le 0) -or ( $Log -le 0) ){ return }
+        if ( ($this.logLevel -le 0) -or ( $Log -le 0) ){ return }
         if (!$FileName -or ($FileName -eq '') ) {
             return
         }
@@ -284,7 +284,7 @@ Class Logger {
         } else {
             $StrLevel=""
         }
-        if ( ($Log -le $this.LogLevel) -or $Always ) {
+        if ( ($Log -le $this.logLevel) -or $Always ) {
             $dt1=(Get-Date -Format "dd.MM.yyyy HH:mm:ss")
             $dt= $dt1 + ":`t"
             $dtspace="".PadLeft($dt1.Length, " ") + " `t"
