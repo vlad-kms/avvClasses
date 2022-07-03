@@ -2,31 +2,30 @@
     [FileCFG]
 #######################################>
 Class FileCFG {
-    [string]$FileName
+    [string]$filename
     [System.Collections.Specialized.OrderedDictionary]$CFG
-	[bool]$ErrorAsException = $false
-	
-    FileCFG(){
-        $this.FileName=$PSCommandPath + '.cfg'
+	[bool]$errorAsException = $false
 
-        $this.InitFileCFG();
+    <#################################################
+    #   Constructors
+    #################################################>
+    FileCFG(){
+        $this.filename=$PSCommandPath + '.cfg'
+        $this.initFileCFG();
     }
     FileCFG([bool]$EaE){
-        $this.FileName=$PSCommandPath + '.cfg'
-		$this.ErrorAsException=$EaE
-
-        $this.InitFileCFG();
+        $this.filename=$PSCommandPath + '.cfg'
+		$this.errorAsException=$EaE
+        $this.initFileCFG();
     }
     FileCFG([string]$FN){
-        $this.FileName=$FN;
-		
-        $this.InitFileCFG();
+        $this.filename=$FN;
+        $this.initFileCFG();
     }
     FileCFG([string]$FN, [bool]$EaE) {
-        $this.FileName=$FN;
-		$this.ErrorAsException=$EaE
-		
-        $this.InitFileCFG();
+        $this.filename=$FN;
+		$this.errorAsException=$EaE
+        $this.initFileCFG();
     }
     
     <#
@@ -34,28 +33,28 @@ Class FileCFG {
 		файла в hashtable.
 		Exception, если не считали, или объект пустой 
     #>
-    [bool]InitFileCFG() {
-        $this.IsExcept(!$this.FileName, $true, "Not defined Filename for file configuration.")
-        $isFile = Test-Path -Path "$($this.FileName)" -PathType Leaf
-        $this.IsExcept(!$isFile, $true, "Not exists file configuration: $($this.FileName)")
-	    $this.CFG=$this.ImportInifile($this.FileName)
+    [bool]initFileCFG() {
+        $this.isExcept(!$this.filename, $true, "Not defined Filename for file configuration.")
+        $isFile = Test-Path -Path "$($this.filename)" -PathType Leaf
+        $this.isExcept(!$isFile, $true, "Not exists file configuration: $($this.filename)")
+	    $this.CFG=$this.importInifile($this.filename)
         $result=($this.CFG.Count -ne 0)
-        $this.IsExcept(!$result, "Error parsing file CFG: $($this.FileName)")
+        $this.isExcept(!$result, "Error parsing file CFG: $($this.filename)")
 
         return $result
     }
     
     <##>
-    [System.Collections.Specialized.OrderedDictionary]ImportInifile([string]$Filename){
+    [System.Collections.Specialized.OrderedDictionary]importInifile([string]$Filename){
         return [ordered]@{}
     }
 
     <##>
-    [string]IsExcept ([bool]$Value, [string]$Msg) {
-        return $this.IsExcept($Value, $this.ErrorAsException, $Msg)
+    [string]isExcept ([bool]$Value, [string]$Msg) {
+        return $this.isExcept($Value, $this.errorAsException, $Msg)
     }
 
-    [string]IsExcept ([bool]$Value, [bool]$EasE, [string]$Msg) {
+    [string]isExcept ([bool]$Value, [bool]$EasE, [string]$Msg) {
         if ( $EasE -and $Value ) {
             throw($Msg)
         }
@@ -67,12 +66,12 @@ Class FileCFG {
         Возврат:
             [System.Collections.Specialized.OrderedDictionary]
                 Список ключей и значений из секции.
-                Если секция не существует, то в зависимости от ErrorAsException, либо пустой список,
+                Если секция не существует, то в зависимости от errorAsException, либо пустой список,
                 либо формируется Exception
     #>
-	[System.Collections.Specialized.OrderedDictionary]ReadSection([string]$Section) {
+	[System.Collections.Specialized.OrderedDictionary]readSection([string]$Section) {
 		$result=[ordered]@{}
-        if ( !$this.IsExcept(!$this.CFG.Contains($Section), "Not found section name $($Section)") ) {
+        if ( !$this.isExcept(!$this.CFG.Contains($Section), "Not found section name $($Section)") ) {
             $result = $this.CFG[$Section]
         }
 		return $result
@@ -83,21 +82,21 @@ Class FileCFG {
         Возврат:
             [string] Пустая строка.
     #>
-    [string] hidden GetKeyValue([string]$Path, [string]$Key){
+    [string] hidden getKeyValue([string]$Path, [string]$Key){
         return ''
     }
 
-    [bool] GetBool([string]$Path, [string]$Key){
-        return [bool]$this.GetKeyValue($Path, $Key)
+    [bool] getBool([string]$Path, [string]$Key){
+        return [bool]$this.getKeyValue($Path, $Key)
     }
-    [string] GetString([string]$Path, [string]$Key){
-        return $this.GetKeyValue($Path, $Key)
+    [string] getString([string]$Path, [string]$Key){
+        return $this.getKeyValue($Path, $Key)
     }
-    [Int] GetInt([string]$Path, [string]$Key){
-        return [int]$this.GetKeyValue($Path, $Key)
+    [Int] getInt([string]$Path, [string]$Key){
+        return [int]$this.getKeyValue($Path, $Key)
     }
-    [long] GetLong([string]$Path, [string]$Key){
-        return [long]$this.GetKeyValue($Path, $Key)
+    [long] getLong([string]$Path, [string]$Key){
+        return [long]$this.getKeyValue($Path, $Key)
     }
 
 }
@@ -107,29 +106,30 @@ Class FileCFG {
     Объект для работы с файлом форматов ini
 #######################################>
 Class IniCFG : FileCFG {
+
     IniCFG() : base() {
-#        $this.FileName=$PSCommandPath + '.cfg'
-#        $res=$this.InitFileCFG();
+        #$this.filename=$PSCommandPath + '.cfg'
+        #$res=$this.initFileCFG();
     }
     IniCFG([bool]$EaE) : base($EaE) {
-#        $this.FileName=$PSCommandPath + '.cfg'
-#		$this.ErrorAsException=$EaE
-#        $res=$this.InitFileCFG();
+        #$this.filename=$PSCommandPath + '.cfg'
+        #$this.errorAsException=$EaE
+        #$res=$this.initFileCFG();
     }
     IniCFG([string]$FN) : base($FN) {
-#        $this.FileName=$FN;
-#        $res=$this.InitFileCFG();
+        #$this.filename=$FN;
+        #$res=$this.initFileCFG();
     }
     IniCFG([string]$FN, [bool]$EaE) : base($FN, $EaE) {
-#        $this.FileName=$FN;
-#		$this.ErrorAsException=$EaE
-        $res=$this.InitFileCFG();
+        #$this.filename=$FN;
+        #$this.errorAsException=$EaE
+        #$res=$this.initFileCFG();
     }
 
-    <#
+    <###############################################################################
         Считать из файла данные
-	#>
-    [System.Collections.Specialized.OrderedDictionary]ImportInifile([string]$Filename){
+	###############################################################################>
+    [System.Collections.Specialized.OrderedDictionary]importInifile([string]$Filename){
         $iniObj = [ordered]@{}
         $section=""
         switch -regex -File $Filename {
@@ -167,7 +167,7 @@ Class IniCFG : FileCFG {
         return $iniObj
     }
 	
-    <#
+    <###############################################################################
         Считать значение ключа, учитывая секцию Default
         Вход:
             [string]$Path - имя секции
@@ -179,9 +179,8 @@ Class IniCFG : FileCFG {
                      Если ключа нет в требуемой секции, то возврат ключа из секции [Default]
                      Если ключа нет ни в требуемой секции, ни в секции [Default], то возврат ""
                      Если значение ключа = _empty_, то вернет пустую строку ''
-     #>
-    #>
-    [string] hidden GetKeyValue([string]$Path, [string]$Key){
+    ###############################################################################>
+    [string] hidden getKeyValue([string]$Path, [string]$Key){
         $Result=''
         if ($this.CFG.Contains($Path)){
             $section = $this.CFG[$Path]
@@ -197,5 +196,4 @@ Class IniCFG : FileCFG {
         if ($Result -eq '_empty_') { $Result='' }
         return $Result
     }
-
 }

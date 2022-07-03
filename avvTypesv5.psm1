@@ -1,6 +1,9 @@
 
 #. .\classes\classLogger.ps1
-. D:\tools\PSModules\avvClasses\classes\classLogger.ps1
+
+$pathModules="D:\tools\PSModules\avvClasses\classes"
+. "$($pathModules)\classLogger.ps1"
+. "$($pathModules)\classCFG.ps1"
 
 function Get-Logger
 {
@@ -15,3 +18,12 @@ function Get-Logger
     #Logger ([String]$logFile, $LogLevel, [boolean]$isAppend, [int32]$tabWidth){
     return [Logger]::new($Filename, $LogLevel, $IsAppend, $TabWidth, $IsExpandTab)
 }
+
+function Get-IniCFG
+{
+    param (
+        [Parameter(Mandatory=$True, Position=0, ValueFromPipeline=$True)]
+        [string]$Filename,
+        [bool]$ErrorAsException=$false
+    )
+    return [IniCFG]::new($Filename, $ErrorAsException)}
