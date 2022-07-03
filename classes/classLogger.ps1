@@ -11,7 +11,7 @@ Class Logger {
 
     Logger ([String]$logFile){
         $this.initDefault(1)
-        $fl = $this.InitFile($logFile)
+        $fl = $this.initFile($logFile)
         if ( $fl ) {
             $this.logFile=$fl
         }
@@ -23,7 +23,7 @@ Class Logger {
 
     Logger ([String]$logFile, [int]$logLevel){
         $this.initDefault($logLevel)
-        $fl = $this.InitFile($logFile)
+        $fl = $this.initFile($logFile)
         if ( $fl ) {
             $this.logFile=$fl
         }
@@ -37,7 +37,7 @@ Class Logger {
         $this.initDefault($logLevel)
         $this.isAppend = $isAppend
 
-        $fl = $this.InitFile($logFile)
+        $fl = $this.initFile($logFile)
         if ( $fl ) {
             $this.logFile=$fl
         }
@@ -51,7 +51,7 @@ Class Logger {
         $this.isAppend = $isAppend
         $this.TW = $tabWidth
 
-        $fl = $this.InitFile($logFile)
+        $fl = $this.initFile($logFile)
         if ( $fl ) {
             $this.logFile=$fl
         }
@@ -72,17 +72,17 @@ Class Logger {
                         Methods
     ##########################################################>
 
-    [string]InitFile ([String]$logFile) {
-        return [logger]::InitFile($logFile, $this.isAppend)
+    [string]initFile ([String]$logFile) {
+        return [logger]::initFile($logFile, $this.isAppend)
     }
 
-    static [string]InitFile ([String]$logFile, [boolean]$isAppend) {
+    static [string]initFile ([String]$logFile, [boolean]$isAppend) {
         $Result=$logFile
         if ( !$logFile) {
             return $Result
             throw "Not defined File logger."
         }
-        if ( !([logger]::IsAbsolutePath($logFile)) ) {
+        if ( !([logger]::isAbsolutePath($logFile)) ) {
             # абсолютный путь и имя файла
             $result = [Environment]::GetEnvironmentVariable('TEMP')
             if ( $logFile.Substring(0,1) -ne '\' ) {
@@ -125,11 +125,11 @@ Class Logger {
         return $Result
     }
 
-    [string] ExpandTab([string]$Str) {
-        return [logger]::ExpandTab($str, $this.TW)
+    [string] expandTab([string]$Str) {
+        return [logger]::expandTab($str, $this.TW)
     }
 
-    static [string] ExpandTab([string]$Str, [UInt32]$TabWidth) {
+    static [string] expandTab([string]$Str, [UInt32]$TabWidth) {
         #if ( ! $this.isExpandTab ) { return $str }
         #if ( $TabWidth -lt 0 ) { $TabWidth = 4 }
         $line=$str
@@ -147,13 +147,15 @@ Class Logger {
             $line = $line -replace "^([^`t]{$i})`t(.*)$","`$1$pad`$2"
         }
         return $line
-    } ### [string] ExpandTab([string]$Str, [UInt32]$TabWidth) {
+    } ### [string] expandTab([string]$Str, [UInt32]$TabWidth) {
 
+    <#
     [string] Add([string]$msg, [int32]$Level=1) {
         return "$(Get-Date -Format 'dd.MM.yyyy hh:mm:ss'):`t$msg"
     }
-    
-    static [boolean]IsAbsolutePath([string]$Path) {
+    #>
+
+    static [boolean]isAbsolutePath([string]$Path) {
         $Result=$False
         if ( ($path.Substring(1, 1) -eq ':') -or ($path.Substring(0, 2) -eq '\\') ) {
             $Result=$True
@@ -161,7 +163,7 @@ Class Logger {
         return $Result
     }
 
-    static [void] Log ([string]$FileName, [string]$Msg, [int32]$TabCount, [int32]$UseDate,
+    static [void] log ([string]$FileName, [string]$Msg, [int32]$TabCount, [int32]$UseDate,
                        [int32]$Log, [int32]$logLevel, [boolean]$Always=$False, [boolean]$isExpandTab,
                        [int32]$TabWidth, [string]$ClassMSG){
         #$UseDate=0,
@@ -257,7 +259,7 @@ Class Logger {
                         $str = $str.Trim()
                     }
                 }
-                if ( $isExpandTab ) { $str=[logger]::ExpandTab($str, $TabWidth) }
+                if ( $isExpandTab ) { $str=[logger]::expandTab($str, $TabWidth) }
                 if ( $i -le 0 ) {
                     if ( $StrLevel ) {
                         $str = $str.PadRight(109, ' ')+$StrLevel
@@ -272,7 +274,7 @@ Class Logger {
         } ### if ( ($Log -le $logLevel) -or $Always ) {
     }
 
-    [void] Log ([string]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always=$False, [string]$ClassMSG){
+    [void] log ([string]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always=$False, [string]$ClassMSG){
         #$UseDate=0,
             <#
                 =0 нет даты в начале строки
@@ -288,12 +290,12 @@ Class Logger {
                 =все отстальное, нет даты в начале строки, но по длине 'дата:TAB-' забито пробелами, TabCount игнорируется
             #>
 
-        [Logger]::Log($this.logFile, $Msg, $TabCount, $UseDate, $Log, $this.logLevel, $Always, $this.isExpandTab, $this.TW, $ClassMSG)
-    } ### Log
+        [Logger]::log($this.logFile, $Msg, $TabCount, $UseDate, $Log, $this.logLevel, $Always, $this.isExpandTab, $this.TW, $ClassMSG)
+    } ### log
 
-    [void] Log ([string[]]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always=$False, [string]$ClassMSG){
+    [void] log ([string[]]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always=$False, [string]$ClassMSG){
         foreach ($str in $Msg) {
-            $this.Log($str, $TabCount, $UseDate, $Log, $Always, $ClassMSG)
+            $this.log($str, $TabCount, $UseDate, $Log, $Always, $ClassMSG)
         }
     }
 
