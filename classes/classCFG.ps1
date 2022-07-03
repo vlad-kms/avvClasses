@@ -196,5 +196,4 @@ Class IniCFG : FileCFG {
         if ($Result -eq '_empty_') { $Result='' }
         return $Result
     }
-
 }
