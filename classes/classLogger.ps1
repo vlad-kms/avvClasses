@@ -8,6 +8,18 @@ Class Logger {
     <####################################################
     #                   Constructors
     ####################################################>
+    Logger () {
+        $this.initDefault(1)
+        $fl = $this.initFile([System.IO.Path]::GetTempFileName())
+        if ( $fl ) {
+            $this.logFile=$fl
+        }
+        else {
+            #$this.logFile="";
+            $this.logLevel=-1
+        }
+    }
+
     Logger ([String]$logFile){
         $this.initDefault(1)
         $fl = $this.initFile($logFile)
