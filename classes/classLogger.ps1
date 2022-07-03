@@ -169,7 +169,8 @@ Class Logger {
         #$UseDate=0,
             <###--
                 FileName- имя файла? relf gbcfnm логи
-                Msg     - строка лога
+                Msg     - строка лога, предварительно разбивается на массив строк по символу
+                          '`n' (перевод строки)
                 TabCount- сколько TAB'ов отступать от начала строки (от 0 и больше)
                 UseDate - использование даты в строке лога
                     =0  нет даты в начале строки
@@ -274,31 +275,20 @@ Class Logger {
         } ### if ( ($Log -le $logLevel) -or $Always ) {
     }
 
-    [void] log ([string]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always=$False, [string]$ClassMSG){
-        #$UseDate=0,
-            <#
-                =0 нет даты в начале строки
-                =1 дата в начале только 1-й строки
-                =2 дата в начале каждой строки
-                =3 нет даты в начале строки, но по длине 'дата:TAB' забито пробелами, TabCount НЕ игнорируется
-                =4 1-я строка - дата в начале, TabCount игнорируется
-                       следующие -  даты в начале строки нет,  но по длине 'дата:TAB-' забито пробелами, TabCount НЕ игнорируется
-                =5 1-я строка - дата в начале, TabCount не игнорируется
-                       следующие -  даты в начале строки нет,  но по длине 'дата:TAB-' забито пробелами, TabCount НЕ игнорируется
-                =6 1-я строка - дата в начале, TabCount не игнорируется
-                    следующие -  даты в начале строки нет,  но по длине 'дата:TAB+TAB-' забито пробелами, TabCount НЕ игнорируется
-                =все отстальное, нет даты в начале строки, но по длине 'дата:TAB-' забито пробелами, TabCount игнорируется
-            #>
-
+    [void] log ([string]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always=$false, [string]$ClassMSG=''){
         [Logger]::log($this.logFile, $Msg, $TabCount, $UseDate, $Log, $this.logLevel, $Always, $this.isExpandTab, $this.TW, $ClassMSG)
     } ### log
 
-    [void] log ([string[]]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always=$False, [string]$ClassMSG){
+    [void] log ([string[]]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always=$false, [string]$ClassMSG=''){
         foreach ($str in $Msg) {
             $this.log($str, $TabCount, $UseDate, $Log, $Always, $ClassMSG)
         }
     }
 
+    [void] log ([array]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always=$false, [string]$ClassMSG=''){
+        $str=[String]::join("`n", $Msg)
+        $this.log([string]$str, $TabCount, $UseDate, $Log, $Always, $ClassMSG)
+    }
 }
 
 <###
