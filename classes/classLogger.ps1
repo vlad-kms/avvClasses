@@ -5,6 +5,125 @@ Class Logger {
     [int32]$TW
     [boolean]$isExpandTab
 
+    <####################################################
+    #                   Constructors
+    ####################################################>
+
+    Logger ([String]$logFile){
+        $this.initDefault(1)
+        $fl = $this.InitFile($logFile)
+        if ( $fl ) {
+            $this.logFile=$fl
+        }
+        else {
+            #$this.logFile="";
+            $this.logLevel=-1
+        }
+    }
+
+    Logger ([String]$logFile, [int]$logLevel){
+        $this.initDefault($logLevel)
+        $fl = $this.InitFile($logFile)
+        if ( $fl ) {
+            $this.logFile=$fl
+        }
+        else {
+            #$this.logFile="";
+            $this.logLevel=-1
+        }
+    }
+
+    Logger ([String]$logFile, [int]$logLevel, [boolean]$isAppend){
+        $this.initDefault($logLevel)
+        $this.isAppend = $isAppend
+
+        $fl = $this.InitFile($logFile)
+        if ( $fl ) {
+            $this.logFile=$fl
+        }
+        else {
+            $this.logLevel=-1
+        }
+    }
+
+    Logger ([String]$logFile, [int]$logLevel, [boolean]$isAppend, [int32]$Tabwidth){
+        $this.initDefault($logLevel)
+        $this.isAppend = $isAppend
+        $this.TW = $Tabwidth
+
+        $fl = $this.InitFile($logFile)
+        if ( $fl ) {
+            $this.logFile=$fl
+        }
+        else {
+            $this.logLevel=-1
+        }
+    }
+
+    [void]initDefault([int]$logLevel) {
+        $this.isExpandTab = $True
+        $this.TW       = 4
+        $this.isAppend = $True
+        $this.logLevel = $logLevel
+        $this.logFile  = ""
+    }
+
+    <##########################################################
+                        Methods
+    ##########################################################>
+
+    [string]InitFile ([String]$logFile) {
+        return [logger]::InitFile($logFile, $this.isAppend)
+    }
+
+    static [string]InitFile ([String]$logFile, [boolean]$isAppend) {
+        $Result=$logFile
+        if ( !$logFile) {
+            return $Result
+            throw "Not defined File logger."
+        }
+        if ( !([logger]::IsAbsolutePath($logFile)) ) {
+            # абсолютный путь и имя файла
+            $result = [Environment]::GetEnvironmentVariable('TEMP')
+            if ( $logFile.Substring(0,1) -ne '\' ) {
+                $result += '\'
+            }
+            $result+=$logFile
+        }
+        $FN = Split-Path -Path $Result -Leaf
+        $PathLog = Split-Path -Path $Result -Parent
+        <#
+        if (! (Test-Path $PathLog -PathType Container) ) {
+            New-Item $PathLog -ItemType Directory | Out-Null
+        }
+#>
+        if ( Test-Path $Result -PathType Any ) {
+            if ( Test-Path $Result -PathType Container ) {
+                $Result = ""
+            }
+        }
+        else {
+            if ( Test-Path $PathLog -PathType Any ) {
+                if ( !(Test-Path $PathLog -PathType Container) ) {
+                    $result = ""
+                }
+            } else { ### if ( Test-Path $PathLog -PathType Any ) {
+                $outNI = New-Item $PathLog -ItemType Directory
+                if ( !$outNI ) {
+                    $result = ""
+                }
+            }
+        } ### if ( Test-Path $Result -PathType Any ) {
+        if ( $Result ) {
+            if ( !($isAppend) -or !(Test-Path $Result) ) {
+                New-Item $Result -ItemType File -Force | Out-Null
+            }
+            else {
+                #Out-File -FilePath $Result -encoding "default" -InputObject "" -Append
+            }
+        }
+        return $Result
+    }
 
     [string] ExpandTab([string]$Str) {
         return [logger]::ExpandTab($str, $this.TW)
@@ -40,118 +159,6 @@ Class Logger {
             $Result=$True
         }
         return $Result
-    }
-
-    [void]InitDefault([int]$logLevel) {
-        $this.isExpandTab = $True
-        $this.TW       = 4
-        $this.isAppend = $True
-        $this.logLevel = $logLevel
-        $this.logFile  = ""
-    }
-
-    [string]InitFile ([String]$logFile) {
-        return [logger]::InitFile($logFile, $this.isAppend)
-    }
-
-    static [string]InitFile ([String]$logFile, [boolean]$isAppend) {
-        $Result=$logFile
-        if ( !$logFile) {
-            return $Result
-            throw "Not defined File logger." 
-        }
-        if ( !([logger]::IsAbsolutePath($logFile)) ) {
-            # абсолютный путь и имя файла
-            $result = [Environment]::GetEnvironmentVariable('TEMP')
-            if ( $logFile.Substring(0,1) -ne '\' ) {
-                $result += '\'
-            }
-            $result+=$logFile
-        }
-        $FN = Split-Path -Path $Result -Leaf
-        $PathLog = Split-Path -Path $Result -Parent
-<#
-        if (! (Test-Path $PathLog -PathType Container) ) {
-            New-Item $PathLog -ItemType Directory | Out-Null
-        }
-#>
-        if ( Test-Path $Result -PathType Any ) {
-            if ( Test-Path $Result -PathType Container ) {
-                $Result = ""
-            }
-        }
-        else {
-            if ( Test-Path $PathLog -PathType Any ) {
-                if ( !(Test-Path $PathLog -PathType Container) ) {
-                    $result = ""
-                }
-            } else { ### if ( Test-Path $PathLog -PathType Any ) {
-                $outNI = New-Item $PathLog -ItemType Directory
-                if ( !$outNI ) {
-                    $result = ""
-                }
-            }
-        } ### if ( Test-Path $Result -PathType Any ) {
-        if ( $Result ) {
-            if ( !($isAppend) -or !(Test-Path $Result) ) {
-                New-Item $Result -ItemType File -Force | Out-Null
-            }
-            else {
-                #Out-File -FilePath $Result -encoding "default" -InputObject "" -Append
-            }
-        }
-        return $Result
-    }
-
-    Logger ([String]$logFile){
-        $this.InitDefault(1)
-        $fl = $this.InitFile($logFile)
-        if ( $fl ) {
-            $this.logFile=$fl
-        }
-        else {
-            #$this.logFile="";
-            $this.logLevel=-1
-        }
-    }
-
-    Logger ([String]$logFile, [int]$logLevel){
-        $this.InitDefault($logLevel)
-        $fl = $this.InitFile($logFile)
-        if ( $fl ) {
-            $this.logFile=$fl
-        }
-        else {
-            #$this.logFile="";
-            $this.logLevel=-1
-        }
-    }
-
-    Logger ([String]$logFile, [int]$logLevel, [boolean]$isAppend){
-        $this.InitDefault($logLevel)
-        $this.isAppend = $isAppend
-
-        $fl = $this.InitFile($logFile)
-        if ( $fl ) {
-            $this.logFile=$fl
-        }
-        else {
-            $this.logLevel=-1
-        }
-    }
-
-    Logger ([String]$logFile, [int]$logLevel, [boolean]$isAppend, [int32]$Tabwidth){
-        $this.InitDefault($logLevel)
-        $this.isAppend = $isAppend
-        $this.TW = $Tabwidth
-
-        $fl = $this.InitFile($logFile)
-        if ( $fl ) {
-            $this.logFile=$fl
-        }
-        else {
-            $this.logLevel=-1
-        }
     }
 
     static [void] Log ([string]$FileName, [string]$Msg, [int32]$TabCount, [int32]$UseDate,
@@ -266,7 +273,7 @@ Class Logger {
                 =все отстальное, нет даты в начале строки, но по длине 'дата:TAB-' забито пробелами, TabCount игнорируется
             #>
 
-        [logger]::Log($this.logFile, $Msg, $TabCount, $UseDate, $Log, $this.logLevel, $Always, $this.isExpandTab, $this.TW, $ClassMSG)
+        [Logger]::Log($this.logFile, $Msg, $TabCount, $UseDate, $Log, $this.logLevel, $Always, $this.isExpandTab, $this.TW, $ClassMSG)
 <###
         $FileName = $this.logFile
         if ( !$Msg) { return }
