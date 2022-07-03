@@ -1,9 +1,9 @@
 Class Logger {
-    [int32]$LogLevel
-    [boolean]$Append
-    [string]$LogFile
+    [int32]$logLevel
+    [boolean]$isAppend
+    [string]$logFile
     [int32]$TW
-    [boolean]$FlagExpandTab
+    [boolean]$isExpandTab
 
 
     [string] ExpandTab([string]$Str) {
@@ -11,7 +11,7 @@ Class Logger {
     }
 
     static [string] ExpandTab([string]$Str, [UInt32]$TabWidth) {
-        #if ( ! $this.FlagExpandTab ) { return $str }
+        #if ( ! $this.isExpandTab ) { return $str }
         #if ( $TabWidth -lt 0 ) { $TabWidth = 4 }
         $line=$str
         while ( $TRUE ) {
@@ -42,31 +42,31 @@ Class Logger {
         return $Result
     }
 
-    [void]InitDefault([int]$LogLevel) {
-        $this.FlagExpandTab = $True
+    [void]InitDefault([int]$logLevel) {
+        $this.isExpandTab = $True
         $this.TW       = 4
-        $this.Append   = $True
-        $this.LogLevel = $LogLevel
-        $this.LogFile  = ""
+        $this.isAppend = $True
+        $this.logLevel = $logLevel
+        $this.logFile  = ""
     }
 
-    [string]InitFile ([String]$LogFile) {
-        return [logger]::InitFile($LogFile, $this.Append)
+    [string]InitFile ([String]$logFile) {
+        return [logger]::InitFile($logFile, $this.isAppend)
     }
 
-    static [string]InitFile ([String]$LogFile, [boolean]$Append) {
-        $Result=$LogFile
-        if ( !$LogFile) {
+    static [string]InitFile ([String]$logFile, [boolean]$isAppend) {
+        $Result=$logFile
+        if ( !$logFile) {
             return $Result
             throw "Not defined File logger." 
         }
-        if ( !([logger]::IsAbsolutePath($LogFile)) ) {
+        if ( !([logger]::IsAbsolutePath($logFile)) ) {
             # абсолютный путь и имя файла
             $result = [Environment]::GetEnvironmentVariable('TEMP')
-            if ( $LogFile.Substring(0,1) -ne '\' ) {
+            if ( $logFile.Substring(0,1) -ne '\' ) {
                 $result += '\'
             }
-            $result+=$LogFile
+            $result+=$logFile
         }
         $FN = Split-Path -Path $Result -Leaf
         $PathLog = Split-Path -Path $Result -Parent
@@ -93,7 +93,7 @@ Class Logger {
             }
         } ### if ( Test-Path $Result -PathType Any ) {
         if ( $Result ) {
-            if ( !($Append) -or !(Test-Path $Result) ) {
+            if ( !($isAppend) -or !(Test-Path $Result) ) {
                 New-Item $Result -ItemType File -Force | Out-Null
             }
             else {
@@ -103,59 +103,59 @@ Class Logger {
         return $Result
     }
 
-    Logger ([String]$LogFile){
+    Logger ([String]$logFile){
         $this.InitDefault(1)
-        $fl = $this.InitFile($LogFile)
+        $fl = $this.InitFile($logFile)
         if ( $fl ) {
-            $this.LogFile=$fl
+            $this.logFile=$fl
         }
         else {
-            #$this.LogFile="";
-            $this.LogLevel=-1
+            #$this.logFile="";
+            $this.logLevel=-1
         }
     }
 
-    Logger ([String]$LogFile, [int]$LogLevel){
-        $this.InitDefault($LogLevel)
-        $fl = $this.InitFile($LogFile)
+    Logger ([String]$logFile, [int]$logLevel){
+        $this.InitDefault($logLevel)
+        $fl = $this.InitFile($logFile)
         if ( $fl ) {
-            $this.LogFile=$fl
+            $this.logFile=$fl
         }
         else {
-            #$this.LogFile="";
-            $this.LogLevel=-1
+            #$this.logFile="";
+            $this.logLevel=-1
         }
     }
 
-    Logger ([String]$LogFile, [int]$LogLevel, [boolean]$Append){
-        $this.InitDefault($LogLevel)
-        $this.Append = $Append
+    Logger ([String]$logFile, [int]$logLevel, [boolean]$isAppend){
+        $this.InitDefault($logLevel)
+        $this.isAppend = $isAppend
 
-        $fl = $this.InitFile($LogFile)
+        $fl = $this.InitFile($logFile)
         if ( $fl ) {
-            $this.LogFile=$fl
+            $this.logFile=$fl
         }
         else {
-            $this.LogLevel=-1
+            $this.logLevel=-1
         }
     }
 
-    Logger ([String]$LogFile, [int]$LogLevel, [boolean]$Append, [int32]$Tabwidth){
-        $this.InitDefault($LogLevel)
-        $this.Append = $Append
+    Logger ([String]$logFile, [int]$logLevel, [boolean]$isAppend, [int32]$Tabwidth){
+        $this.InitDefault($logLevel)
+        $this.isAppend = $isAppend
         $this.TW = $Tabwidth
 
-        $fl = $this.InitFile($LogFile)
+        $fl = $this.InitFile($logFile)
         if ( $fl ) {
-            $this.LogFile=$fl
+            $this.logFile=$fl
         }
         else {
-            $this.LogLevel=-1
+            $this.logLevel=-1
         }
     }
 
     static [void] Log ([string]$FileName, [string]$Msg, [int32]$TabCount, [int32]$UseDate,
-                       [int32]$Log, [int32]$LogLevel, [boolean]$Always=$False, [boolean]$FlagExpandTab,
+                       [int32]$Log, [int32]$logLevel, [boolean]$Always=$False, [boolean]$isExpandTab,
                        [int32]$TabWidth, [string]$ClassMSG){
         #$UseDate=0,
             <#
@@ -172,7 +172,7 @@ Class Logger {
                 =все отстальное, нет даты в начале строки, но по длине 'дата:TAB-' забито пробелами, TabCount игнорируется
             #>
         if ( !$Msg) { return }
-        if ( ($LogLevel -le 0) -or ( $Log -le 0) ){ return }
+        if ( ($logLevel -le 0) -or ( $Log -le 0) ){ return }
         if (!$FileName -or ($FileName -eq '') ) { return }
         $PL = Split-Path $FileName -Parent
         if (! (Test-Path $PL -PathType Container) ) {
@@ -183,7 +183,7 @@ Class Logger {
         } else {
             $StrLevel=""
         }
-        if ( ($Log -le $LogLevel) -or $Always ) {
+        if ( ($Log -le $logLevel) -or $Always ) {
             $dt1=(Get-Date -Format "dd.MM.yyyy HH:mm:ss")
             $dt= $dt1 + ":`t"
             $dtspace="".PadLeft($dt1.Length, " ") + " `t"
@@ -235,7 +235,7 @@ Class Logger {
                         $str = $str.Trim()
                     }
                 }
-                if ( $FlagExpandTab ) { $str=[logger]::ExpandTab($str, $TabWidth) }
+                if ( $isExpandTab ) { $str=[logger]::ExpandTab($str, $TabWidth) }
                 if ( $i -le 0 ) {
                     if ( $StrLevel ) {
                         $str = $str.PadRight(109, ' ')+$StrLevel
@@ -266,11 +266,11 @@ Class Logger {
                 =все отстальное, нет даты в начале строки, но по длине 'дата:TAB-' забито пробелами, TabCount игнорируется
             #>
 
-        [logger]::Log($this.LogFile, $Msg, $TabCount, $UseDate, $Log, $this.LogLevel, $Always, $this.FlagExpandTab, $this.TW, $ClassMSG)
-<#
-        $FileName = $this.LogFile
+        [logger]::Log($this.logFile, $Msg, $TabCount, $UseDate, $Log, $this.logLevel, $Always, $this.isExpandTab, $this.TW, $ClassMSG)
+<###
+        $FileName = $this.logFile
         if ( !$Msg) { return }
-        if ( ($this.LogLevel -le 0) -or ( $Log -le 0) ){ return }
+        if ( ($this.logLevel -le 0) -or ( $Log -le 0) ){ return }
         if (!$FileName -or ($FileName -eq '') ) {
             return
         }
@@ -284,7 +284,7 @@ Class Logger {
         } else {
             $StrLevel=""
         }
-        if ( ($Log -le $this.LogLevel) -or $Always ) {
+        if ( ($Log -le $this.logLevel) -or $Always ) {
             $dt1=(Get-Date -Format "dd.MM.yyyy HH:mm:ss")
             $dt= $dt1 + ":`t"
             $dtspace="".PadLeft($dt1.Length, " ") + " `t"
@@ -336,7 +336,7 @@ Class Logger {
                         $str = $str.Trim()
                     }
                 }
-                if ( $this.FlagExpandTab ) { $str=$this.ExpandTab($str) }
+                if ( $this.isExpandTab ) { $str=$this.ExpandTab($str) }
                 if ( ($i -le 0) -and ($StrLevel) ) {
                     $str = $str.PadRight(109, ' ')+$StrLevel
                 }
@@ -344,7 +344,7 @@ Class Logger {
                 $i += 1
             } ### foreach ($str in $as) {
         }
-#>
+###>
     } ### Log
 
     [void] Log ([string[]]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always=$False, [string]$ClassMSG){
@@ -355,6 +355,6 @@ Class Logger {
 
 }
 
-<#
+<###
 $l=[logger]::new('d:\temp\123.log', 1)
-#>
+###>
