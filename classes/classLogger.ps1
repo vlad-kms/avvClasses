@@ -8,7 +8,6 @@ Class Logger {
     <####################################################
     #                   Constructors
     ####################################################>
-
     Logger ([String]$logFile){
         $this.initDefault(1)
         $fl = $this.initFile($logFile)
@@ -20,7 +19,6 @@ Class Logger {
             $this.logLevel=-1
         }
     }
-
     Logger ([String]$logFile, [int]$logLevel){
         $this.initDefault($logLevel)
         $fl = $this.initFile($logFile)
@@ -32,7 +30,6 @@ Class Logger {
             $this.logLevel=-1
         }
     }
-
     Logger ([String]$logFile, [int]$logLevel, [boolean]$isAppend){
         $this.initDefault($logLevel)
         $this.isAppend = $isAppend
@@ -45,11 +42,24 @@ Class Logger {
             $this.logLevel=-1
         }
     }
-
     Logger ([String]$logFile, [int]$logLevel, [boolean]$isAppend, [int32]$tabWidth){
         $this.initDefault($logLevel)
         $this.isAppend = $isAppend
         $this.TW = $tabWidth
+
+        $fl = $this.initFile($logFile)
+        if ( $fl ) {
+            $this.logFile=$fl
+        }
+        else {
+            $this.logLevel=-1
+        }
+    }
+    Logger ([String]$logFile, [int]$logLevel, [boolean]$isAppend, [int32]$tabWidth, [bool]$isExpandTab){
+        $this.initDefault($logLevel)
+        $this.isAppend = $isAppend
+        $this.TW = $tabWidth
+        $this.isExpandTab = $isExpandTab
 
         $fl = $this.initFile($logFile)
         if ( $fl ) {
@@ -125,10 +135,14 @@ Class Logger {
         return $Result
     }
 
+    <#######################################################################################
+    #   expandTab
+    #       Форматировать строку подставляя вместо `t (TAB) ' ' (SPACE) количеством $TabWidth
+    #       Статическая функция и метод класса
+    #######################################################################################>
     [string] expandTab([string]$Str) {
         return [logger]::expandTab($str, $this.TW)
     }
-
     static [string] expandTab([string]$Str, [UInt32]$TabWidth) {
         #if ( ! $this.isExpandTab ) { return $str }
         #if ( $TabWidth -lt 0 ) { $TabWidth = 4 }
@@ -155,6 +169,9 @@ Class Logger {
     }
     #>
 
+    ##############################################
+    # Вернуть TRUE, если путь является абсолютным
+    ##############################################
     static [boolean]isAbsolutePath([string]$Path) {
         $Result=$False
         if ( ($path.Substring(1, 1) -eq ':') -or ($path.Substring(0, 2) -eq '\\') ) {
@@ -163,39 +180,37 @@ Class Logger {
         return $Result
     }
 
+    <############################################################################################################
+        FileName    -   имя файла? relf gbcfnm логи
+        Msg         -   строка лога, предварительно разбивается на массив строк по символу '`n' (перевод строки)
+        TabCount- сколько TAB'ов отступать от начала строки (от 0 и больше)
+        UseDate -   использование даты в строке лога
+                =0  нет даты в начале строки
+                =1  дата в начале только 1-й строки
+                =2  дата в начале каждой строки
+                =3  нет даты в начале строки, но по длине 'дата:TAB' забито пробелами, TabCount НЕ игнорируется
+                =4  1-я строка - дата в начале, TabCount игнорируется
+                    следующие -  даты в начале строки нет,  но по длине 'дата:TAB-' забито пробелами, TabCount НЕ игнорируется
+                =5  1-я строка - дата в начале, TabCount не игнорируется
+                    следующие -  даты в начале строки нет,  но по длине 'дата:TAB-' забито пробелами, TabCount НЕ игнорируется
+                =6  1-я строка - дата в начале, TabCount не игнорируется
+                    следующие -  даты в начале строки нет,  но по длине 'дата:TAB+TAB-' забито пробелами, TabCount НЕ игнорируется
+                =   все отстальное, нет даты в начале строки, но по длине 'дата:TAB-' забито пробелами, TabCount игнорируется
+        ()
+        Log         -   если Log > LogLevel, то строку не писать в лог-файл.
+                        Если Log >=1, то добавить в строку "(Level=$($Log))"
+        LogLevel    -   ограничитель для строк, см. комментарий предыдущего параметра
+        Always      -   если True, то не обращать внимания на соотношение Log и LogLevel.
+                        Т.е. писать в лог-файл всегда
+        ()
+        isExpandTab - если TRUE, то заменить в строке симвал TAB ([char]9) на пробелы
+        TabWidth    -   количество пробелов для замены символа TAB.
+                        Вместо символа TAB вставить TabWidth SPACE
+        ClassMsg- добавить в конец строки, начиная со 150 символа подстроку ClassMsg
+    ############################################################################################################>
     static [void] log ([string]$FileName, [string]$Msg, [int32]$TabCount, [int32]$UseDate,
                        [int32]$Log, [int32]$logLevel, [boolean]$Always=$False, [boolean]$isExpandTab,
                        [int32]$TabWidth, [string]$ClassMSG){
-        #$UseDate=0,
-            <###--
-                FileName- имя файла? relf gbcfnm логи
-                Msg     - строка лога, предварительно разбивается на массив строк по символу
-                          '`n' (перевод строки)
-                TabCount- сколько TAB'ов отступать от начала строки (от 0 и больше)
-                UseDate - использование даты в строке лога
-                    =0  нет даты в начале строки
-                    =1  дата в начале только 1-й строки
-                    =2  дата в начале каждой строки
-                    =3  нет даты в начале строки, но по длине 'дата:TAB' забито пробелами, TabCount НЕ игнорируется
-                    =4  1-я строка - дата в начале, TabCount игнорируется
-                        следующие -  даты в начале строки нет,  но по длине 'дата:TAB-' забито пробелами, TabCount НЕ игнорируется
-                    =5  1-я строка - дата в начале, TabCount не игнорируется
-                        следующие -  даты в начале строки нет,  но по длине 'дата:TAB-' забито пробелами, TabCount НЕ игнорируется
-                    =6  1-я строка - дата в начале, TabCount не игнорируется
-                        следующие -  даты в начале строки нет,  но по длине 'дата:TAB+TAB-' забито пробелами, TabCount НЕ игнорируется
-                    =   все отстальное, нет даты в начале строки, но по длине 'дата:TAB-' забито пробелами, TabCount игнорируется
-                ()
-                Log     - если Log > LogLevel, то строку не писать в лог-файл.
-                          Если Log >=1, то добавить в строку "(Level=$($Log))"
-                LogLevel- ограничитель для строк, см. комментарий предыдущего параметра
-                Always  - если True, то не обращать внимания на соотношение Log и LogLevel.
-                          Т.е. писать в лог-файл всегда
-                ()
-                isExpandTab - если TRUE, то заменить в строке симвал TAB ([char]9) на пробелы
-                TabWidth- количество пробелов для замены символа TAB.
-                          Вместо символа TAB вставить TabWidth SPACE
-                ClassMsg- добавить в конец строки, начиная со 150 символа подстроку ClassMsg
-            ###>
         if ( !$Msg) { return }
         if ( ($logLevel -le 0) -or ( $Log -le 0) ){ return }
         if (!$FileName -or ($FileName -eq '') ) { return }
@@ -275,22 +290,36 @@ Class Logger {
         } ### if ( ($Log -le $logLevel) -or $Always ) {
     }
 
-    [void] log ([string]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always=$false, [string]$ClassMSG=''){
+    [void] log ([string]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG){
         [Logger]::log($this.logFile, $Msg, $TabCount, $UseDate, $Log, $this.logLevel, $Always, $this.isExpandTab, $this.TW, $ClassMSG)
-    } ### log
+    }
+    [void] log ([string]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always){
+        $this.log($Msg, $TabCount, $UseDate, $Log, $Always, '')
+    }
+    [void] log ([string]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log){
+        $this.log($Msg, $TabCount, $UseDate, $Log, $false, '')
+    }
 
-    [void] log ([string[]]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always=$false, [string]$ClassMSG=''){
+    [void] log ([string[]]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG){
         foreach ($str in $Msg) {
             $this.log($str, $TabCount, $UseDate, $Log, $Always, $ClassMSG)
         }
     }
+    [void] log ([string[]]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always){
+        $this.log($Msg, $TabCount, $UseDate, $Log, $Always, '')
+    }
+    [void] log ([string[]]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log){
+        $this.log($Msg, $TabCount, $UseDate, $Log, $false, '')
+    }
 
-    [void] log ([array]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always=$false, [string]$ClassMSG=''){
+    [void] log ([array]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG){
         $str=[String]::join("`n", $Msg)
         $this.log([string]$str, $TabCount, $UseDate, $Log, $Always, $ClassMSG)
     }
+    [void] log ([array]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always){
+        $this.log($Msg, $TabCount, $UseDate, $Log, $Always, '')
+    }
+    [void] log ([array]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log){
+        $this.log($Msg, $TabCount, $UseDate, $Log, $false, '')
+    }
 }
-
-<###
-$l=[logger]::new('d:\temp\123.log', 1)
-###>
