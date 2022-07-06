@@ -1,9 +1,12 @@
 <######################################
     [FileCFG]
+
+Парвила именования Java
 #######################################>
 Class FileCFG {
-    [string]$filename
-    [System.Collections.Specialized.OrderedDictionary]$CFG
+    [string]$filename=''
+    #[System.Collections.Specialized.OrderedDictionary]$CFG
+    [Hashtable]$CFG=[ordered]@{}
 	[bool]$errorAsException = $false
 
     <#################################################
@@ -27,25 +30,36 @@ Class FileCFG {
 		$this.errorAsException=$EaE
         $this.initFileCFG();
     }
-    
+    <##>
+    FileCFG([Hashtable]$CFG) {
+        $this.CFG=$CFG;
+    }
+    FileCFG([Hashtable]$CFG, [bool]$EaE) {
+        $this.CFG=$CFG;
+        $this.errorAsException=$EaE
+    }
+    <##>
     <#
 		Инициализация. Проверить существование файла, считать данные из
 		файла в hashtable.
 		Exception, если не считали, или объект пустой 
     #>
     [bool]initFileCFG() {
-        $this.isExcept(!$this.filename, $true, "Not defined Filename for file configuration.")
-        $isFile = Test-Path -Path "$($this.filename)" -PathType Leaf
-        $this.isExcept(!$isFile, $true, "Not exists file configuration: $($this.filename)")
-	    $this.CFG=$this.importInifile($this.filename)
-        $result=($this.CFG.Count -ne 0)
-        $this.isExcept(!$result, "Error parsing file CFG: $($this.filename)")
-
+        $result=$false
+        if ($this.filename.ToUpper() -ne '_EMPTY_' )
+        {
+            $this.isExcept(!$this.filename, $true, "Not defined Filename for file configuration.")
+            $isFile = Test-Path -Path "$($this.filename)" -PathType Leaf
+            $this.isExcept(!$isFile, $true, "Not exists file configuration: $($this.filename)")
+	        $this.CFG=$this.importInifile($this.filename)
+            $result=($this.CFG.Count -ne 0)
+            $this.isExcept(!$result, "Error parsing file CFG: $($this.filename)")
+        }
         return $result
     }
     
     <##>
-    [System.Collections.Specialized.OrderedDictionary]importInifile([string]$Filename){
+    [System.Collections.Specialized.OrderedDictionary]importInifile([string]$filename){
         return [ordered]@{}
     }
 
@@ -54,13 +68,13 @@ Class FileCFG {
         return $this.isExcept($Value, $this.errorAsException, $Msg)
     }
 
-    [string]isExcept ([bool]$Value, [bool]$EasE, [string]$Msg) {
-        if ( $EasE -and $Value ) {
-            throw($Msg)
+    [string]isExcept ([bool]$value, [bool]$EasE, [string]$msg) {
+        if ( $EasE -and $value ) {
+            throw($msg)
         }
-        if ($Value) {return $Msg} else {return ""}
+        if ($value) {return $msg} else {return ""}
     }
-    
+
 	<#
         Считать секцию
         Возврат:
@@ -69,34 +83,69 @@ Class FileCFG {
                 Если секция не существует, то в зависимости от errorAsException, либо пустой список,
                 либо формируется Exception
     #>
-	[System.Collections.Specialized.OrderedDictionary]readSection([string]$Section) {
-		$result=[ordered]@{}
-        if ( !$this.isExcept(!$this.CFG.Contains($Section), "Not found section name $($Section)") ) {
-            $result = $this.CFG[$Section]
+	#[System.Collections.Specialized.OrderedDictionary]readSection([string]$section) {
+    [Hashtable]readSection([string]$section) {
+		$result=@{};
+        $arrSections = $section.Split('.', [StringSplitOptions]::RemoveEmptyEntries);
+        $sectionName = '';
+        try
+        {
+            $path = $this.CFG;
+            $i = 0;
+            $arrSections.ForEach({
+                $sectionName = $_;
+                if ($path.Contains($_))
+                {
+                    $path = $path[$_];
+                }
+                else
+                {
+                    $path = @{};
+                    #$sectionName = $_;
+                    #Break;
+                }
+            });
+            if (!($path -is [Hashtable]))
+            {
+                $path = @{};
+            }
+            $path.Keys.foreach({
+                $result.Add("$_", $path[$_]);
+            });
+            #$result += @{"$sectionName"=$path};
         }
-		return $result
+        catch
+        {
+            throw;
+        }
+        <#
+        if ( !$this.isExcept(!$this.CFG.Contains($section), "Not found section name $($section)") ) {
+            $result = $this.CFG[$section];
+        }
+        #>
+		return $result;
 	}
     
     <#
-        Считать значение ключа, учитывая секцию Default
+        Считать значение ключа, учитывая секцию default
         Возврат:
             [string] Пустая строка.
     #>
-    [string] hidden getKeyValue([string]$Path, [string]$Key){
+    [Object] hidden getKeyValue([string]$path, [string]$key){
         return ''
     }
 
-    [bool] getBool([string]$Path, [string]$Key){
-        return [bool]$this.getKeyValue($Path, $Key)
+    [bool] getBool([string]$path, [string]$key){
+        return [bool]$this.getKeyValue($path, $key)
     }
-    [string] getString([string]$Path, [string]$Key){
-        return $this.getKeyValue($Path, $Key)
+    [string] getString([string]$path, [string]$key){
+        return       $this.getKeyValue($path, $key)
     }
-    [Int] getInt([string]$Path, [string]$Key){
-        return [int]$this.getKeyValue($Path, $Key)
+    [Int] getInt([string]$path, [string]$key){
+        return  [int]$this.getKeyValue($path, $key)
     }
-    [long] getLong([string]$Path, [string]$Key){
-        return [long]$this.getKeyValue($Path, $Key)
+    [long] getLong([string]$path, [string]$key){
+        return [long]$this.getKeyValue($path, $key)
     }
 
 }
@@ -125,14 +174,20 @@ Class IniCFG : FileCFG {
         #$this.errorAsException=$EaE
         #$res=$this.initFileCFG();
     }
+    <##>
+    IniCFG([String]$FN, [bool]$EaE, [Hashtable]$CFG) : base ($FN, $EaE) {
+    #IniCFG([Hashtable]$CFG, [bool]$EaE) {
+        $this.CFG += $CFG;
+    }
+    <##>
 
     <###############################################################################
         Считать из файла данные
 	###############################################################################>
-    [System.Collections.Specialized.OrderedDictionary]importInifile([string]$Filename){
+    [System.Collections.Specialized.OrderedDictionary]importInifile([string]$filename){
         $iniObj = [ordered]@{}
         $section=""
-        switch -regex -File $Filename {
+        switch -regex -File $filename {
             "^\[(.+)\]$" {
                 $section = $matches[1]
                 $iniObj[$section] = [ordered]@{}
@@ -168,7 +223,7 @@ Class IniCFG : FileCFG {
     }
 	
     <###############################################################################
-        Считать значение ключа, учитывая секцию Default
+        Считать значение ключа, учитывая секцию default
         Вход:
             [string]$Path - имя секции
             [string]$Key  - имя ключа
@@ -176,24 +231,27 @@ Class IniCFG : FileCFG {
             [string] Значение ключа.
                      Если секция $Path отсутсвует, то ""
                      Если ключ есть в требуемой секции, то возвращается значение этого ключа.
-                     Если ключа нет в требуемой секции, то возврат ключа из секции [Default]
-                     Если ключа нет ни в требуемой секции, ни в секции [Default], то возврат ""
+                     Если ключа нет в требуемой секции, то возврат ключа из секции [default]
+                     Если ключа нет ни в требуемой секции, ни в секции [default], то возврат ""
                      Если значение ключа = _empty_, то вернет пустую строку ''
     ###############################################################################>
-    [string] hidden getKeyValue([string]$Path, [string]$Key){
-        $Result=''
-        if ($this.CFG.Contains($Path)){
-            $section = $this.CFG[$Path]
-            if ($section.Contains($Key) -and $section[$Key]) {
-                $Result=$section[$Key]
+    [Object]hidden getKeyValue([string]$path, [string]$key){
+        $result=''
+        if ($this.CFG.Contains($path)){
+            $section = $this.CFG[$path]
+            if ($section.Contains($key) -and $section[$key]) {
+                $result=$section[$key]
             } else {
                 try{
-                    $result=$this.CFG.Default[$Key]
-                } catch {$Result=""}
+                    $result=$this.CFG.default[$key]
+                }
+                catch {
+                    $Result=""
+                }
 
             }
         }
-        if ($Result -eq '_empty_') { $Result='' }
-        return $Result
+        if ($result -eq '_empty_') { $result='' }
+        return $result
     }
 }

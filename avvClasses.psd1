@@ -9,7 +9,7 @@
 @{
 
 # Файл модуля сценария или двоичного модуля, связанный с этим манифестом.
-    RootModule = 'avvTypesv5.psm1'
+    RootModule = 'avvClasses.psm1'
 
     # Номер версии данного модуля.
     ModuleVersion = '1.0'

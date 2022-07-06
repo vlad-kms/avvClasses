@@ -34,13 +34,49 @@ function Get-IniCFG
 —оздать экземпл€р класса по имени класса.
 —оздавать только без параметров. »нициализировать только после создани€
 ############################################>
+function Hashtable2Params([Hashtable]$ht)
+{
+    if ($ht -is [hashtable]) {
+        if ($ht.Contains("type") -and $ht.type -and $ht.type -ne ""){
+            if ($ht.type.ToUpper() -eq "STRING") {$ts = """$($ht.Value)"""}
+            elseif ($ht.type.ToUpper() -eq "INT") {$ts = "$($ht.Value)"}
+            #elseif ($ht.type.ToUpper() -eq "BOOL") {$ts = [int][bool]$ht.Value}
+            elseif ($ht.type.ToUpper() -eq "OBJ") {$ts = $ht.Value}
+            else {$ts = """$($ht.Value)"""};
+        } else {$ts = """$($ht.Value)""" }
+    } else {$ts='qwerty TYPE'};
+    return $ts;
+}
 function Get-AvvClass {
     param (
         [Parameter(Mandatory=$True, Position=0, ValueFromPipeline=$True)]
-        [string]$ClassName
+        [string]$ClassName,
+        [Hashtable]$Params=@{}
     )
-    #$cmd=
-    return Invoke-Expression -Command "[$ClassName]::new()"
+    if ( $Params.Contains('Constructor') -and
+        ($Params['Constructor'] -is [Hashtable]) -and
+        ($Params['Constructor'].Count -ne 0) )
+    {
+        $construct=$Params['Constructor'];
+        $parStr = '';
+        for ($i = 0; $i -lt $Params['Constructor'].Count; $i++)
+        {
+            #$str = ([string]$Params['Constructor']["param$($i)"]).Trim();
+            $ht  = $construct["param$($i)"];
+            if ($ht.Count -ne 0)
+            {
+                $parStr += (Hashtable2Params($ht)) + ',';
+            }
+        }
+        if ($parStr) {
+            $parStr = $parStr.Substring(0, $parStr.Length - 1);
+        }
+        return Invoke-Expression -Command "[$ClassName]::new($parStr)"
+    }
+    else
+    {
+        return Invoke-Expression -Command "[$ClassName]::new()"
+    }
 }
 
 ###########################################################
