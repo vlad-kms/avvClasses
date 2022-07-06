@@ -1,11 +1,11 @@
 <######################################
     [FileCFG]
 
-Парвила именования Java
+Правила именования Java
 #######################################>
 Class FileCFG {
     [string]$filename=''
-    #[System.Collections.Specialized.OrderedDictionary]$CFG
+    #[Hashtable]$CFG
     [Hashtable]$CFG=[ordered]@{}
 	[bool]$errorAsException = $false
 
@@ -59,7 +59,7 @@ Class FileCFG {
     }
     
     <##>
-    [System.Collections.Specialized.OrderedDictionary]importInifile([string]$filename){
+    [Hashtable]importInifile([string]$filename){
         return [ordered]@{}
     }
 
@@ -78,51 +78,50 @@ Class FileCFG {
 	<#
         Считать секцию
         Возврат:
-            [System.Collections.Specialized.OrderedDictionary]
+            [Hashtable]
                 Список ключей и значений из секции.
                 Если секция не существует, то в зависимости от errorAsException, либо пустой список,
                 либо формируется Exception
     #>
-	#[System.Collections.Specialized.OrderedDictionary]readSection([string]$section) {
+	#[Hashtable]readSection([string]$section) {
     [Hashtable]readSection([string]$section) {
-		$result=@{};
+		$result = @{};
+        $code = 0;
         $arrSections = $section.Split('.', [StringSplitOptions]::RemoveEmptyEntries);
-        $sectionName = '';
-        try
-        {
-            $path = $this.CFG;
-            $i = 0;
-            $arrSections.ForEach({
-                $sectionName = $_;
-                if ($path.Contains($_))
-                {
-                    $path = $path[$_];
-                }
-                else
-                {
-                    $path = @{};
-                    #$sectionName = $_;
-                    #Break;
-                }
-            });
-            if (!($path -is [Hashtable]))
+        $path = $this.CFG;
+        $arrSections.ForEach({
+            if ( $path.Contains($_) -and
+                    (
+                        ($path[$_] -is [Hashtable]) -or
+                        ($path[$_] -is [System.Collections.Specialized.OrderedDictionary])
+                    )
+                )
+            {
+                $path = $path[$_];
+            }
+            else
             {
                 $path = @{};
+                $code = 1;
             }
-            $path.Keys.foreach({
-                $result.Add("$_", $path[$_]);
-            });
-            #$result += @{"$sectionName"=$path};
-        }
-        catch
+        });
+        if (!($path -is [Hashtable]) -and
+                !($path -is [System.Collections.Specialized.OrderedDictionary])
+            )
         {
-            throw;
+            $path = @{};
+            $code = 1;
         }
-        <#
-        if ( !$this.isExcept(!$this.CFG.Contains($section), "Not found section name $($section)") ) {
-            $result = $this.CFG[$section];
+        $res = @{};
+        $path.Keys.foreach({
+            $res.Add("$_", $path[$_]);
+        });
+        # Если в секции нет значений и $this.ErrorAsException, тогда породить Exception
+        !$this.isExcept($res.Keys.Count -eq 0, "Not found section name $($section) or is not Section type");
+        $result = @{
+            'code'=$code;
+            'result'=$res
         }
-        #>
 		return $result;
 	}
     
@@ -184,7 +183,7 @@ Class IniCFG : FileCFG {
     <###############################################################################
         Считать из файла данные
 	###############################################################################>
-    [System.Collections.Specialized.OrderedDictionary]importInifile([string]$filename){
+    [Hashtable]importInifile([string]$filename){
         $iniObj = [ordered]@{}
         $section=""
         switch -regex -File $filename {
@@ -237,20 +236,22 @@ Class IniCFG : FileCFG {
     ###############################################################################>
     [Object]hidden getKeyValue([string]$path, [string]$key){
         $result=''
-        if ($this.CFG.Contains($path)){
-            $section = $this.CFG[$path]
-            if ($section.Contains($key) -and $section[$key]) {
-                $result=$section[$key]
-            } else {
-                try{
-                    $result=$this.CFG.default[$key]
-                }
-                catch {
-                    $Result=""
-                }
-
+        $res = $this.readSection($path);
+        if ($res.code -ne 0 ) {
+            return $result
+        }
+        $section = $res.result;
+        if ($section.Contains($key) -and $section[$key]) {
+            $result=$section[$key]
+        } else {
+            try{
+                $result=$this.CFG.default[$key]
+            }
+            catch {
+                $result=""
             }
         }
+        !$this.isExcept($result.Length -eq 0, "Not found key $($key) in section name $($path)");
         if ($result -eq '_empty_') { $result='' }
         return $result
     }
