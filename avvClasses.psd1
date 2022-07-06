@@ -12,7 +12,7 @@
     RootModule = 'avvClasses.psm1'
 
     # Номер версии данного модуля.
-    ModuleVersion = '1.0'
+    ModuleVersion = '2.2.0'
 
     # Поддерживаемые выпуски PSEditions
     # CompatiblePSEditions = @()
