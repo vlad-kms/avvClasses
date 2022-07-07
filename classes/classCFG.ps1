@@ -69,14 +69,9 @@
 #                         $isOverwrite показывает перезаписывать файл или нет
 #   saveToFile()          - то же что и выше, но записывается в файл $this.filename. По умолчанию $isOverwrite=$False
 #   saveToFile([bool]$isOverwrite)
-#
-# TODO
-# TODO Сделать функции:
-# TODO  setKeyValue         - записать значение в ключ секции
-# TODO  getCreateSection    - вернуть @{code=0;result=@{section}}, если секция существует
-# TODO                                @{code=1;result@{newSection}}, если создали новую секцию
-# TODO                                @{code=10;result=@{}}, если не смогли создать секцию (где-то в цепочке
-# TODO                                  имен секций есть ключ, который не секция (Hashtable)
+#   [bool] hidden setKeyValue([string]$path, [string]$key, [Object]$value){
+#                       - записать значение в ключ секции, значение ключа по пути.
+#                         Если ключ = '', то метод проверяет есть ли путь, и создает его если его нет.
 #
 #>
 
@@ -157,14 +152,21 @@ Class FileCFG {
         if ($value) {return $msg} else {return ""}
     }
 
-	<#
-        Считать секцию
-        Возврат:
-            [Hashtable]
-                Список ключей и значений из секции.
-                Если секция не существует, то в зависимости от errorAsException, либо пустой список,
-                либо формируется Exception
-    #>
+	<########################################################################
+    #   Считать секцию
+    #   Возврат:
+    #       [Hashtable]@{
+    #           code:   0 - секция есть и ее считали
+    #                   1 - нет пути, т.е. какой-то элемента в section
+    #                   2 - есть путь, но какой-то элемент в пути не
+    #                       является [Hashtable]п
+    #                   3 -
+    #           result:   - считанная секция, т.е. ее ключи и значения
+    #                       Список ключей и значений из секции.
+    #       }
+    #       Если секция не существует, то в зависимости от errorAsException,
+    #       либо пустой список, либо формируется Exception
+    #########################################################################>
     [Hashtable]readSection([string]$section) {
 		$result = @{};
         $code = 0;
@@ -183,38 +185,47 @@ Class FileCFG {
         #           }
         # }
         $arrSections.ForEach({
-            #if ( $path.Contains($_) -and
-                    #(
-                    #    ($path[$_] -is [Hashtable]) -or
-                    #    ($path[$_] -is [System.Collections.Specialized.OrderedDictionary])
-                    #)
-                #)
-            if ( $path.Contains($_) -and $this.isHashtable($path[$_]) )
+            #if ( $path.Contains($_) -and $this.isHashtable($path[$_]) )
+            if ( $path.Contains($_) )
             {
-                $path = $path[$_];
+                if ( ($path[$_] -is [Hashtable]) -or
+                     ($path[$_] -is [System.Collections.Specialized.OrderedDictionary])
+                    )
+
+                {
+                    $path = $path[$_];
+                }
+                else
+                {
+                    # путь есть, но элемент не [Hashtable]
+                    $path = @{};
+                    $code = 2;
+                }
             }
             else
             {
+                # нет такого пути
                 $path = @{};
                 $code = 1;
             }
         });
         # ошибка и пустой Hashtable, если считанное значение не Hashtable.
         # Т.е. убрали считывание ключа, оставили только секцию
-        #if (!($path -is [Hashtable]) -and
-        #        !($path -is [System.Collections.Specialized.OrderedDictionary])
-        #    )
-        if (!($this.isHashtable($path)) )
+        if (!($path -is [Hashtable]) -and
+                !($path -is [System.Collections.Specialized.OrderedDictionary])
+            )
+        #if (!($this.isHashtable($path)) )
         {
+            # последний элемент в пути не является [Hashtable]
             $path = @{};
-            $code = 1;
+            $code = 2;
         }
         $res = @{};
         $path.Keys.foreach({
             $res.Add("$_", $path[$_]);
         });
-        # Если в секции нет значений и $this.ErrorAsException, тогда породить Exception
-        !$this.isExcept($res.Keys.Count -eq 0, "Not found section name $($section) or is not Section type");
+        # Если в секции нет значений и $this.ErrorAsException и $code <> 0, то породить Exception
+        !$this.isExcept( ($res.Keys.Count -eq 0) -and ($code -ne 0), "Not found section name $($section) or is not Section type");
         $result = @{
             'code'=$code;
             'result'=$res
@@ -271,11 +282,76 @@ Class FileCFG {
         return $result;
     }
 
-    <# Записать значение ключа
-    #  Возврат: $true если запись удачно, иначе $false
-    #>
+    ##########################################################
+    # Записать значение ключа по пути.
+    # Если ключ = '', то метод проверяет есть ли путь, и создает его если его нет.
+    # и возвращает True,
+    # если есть, или смог его создать только попытаться создать путь (секции), если его нет,
+    # или вернуть
+    # Вход:
+    #   $path   - секция, куда добавить key=value, или изменить его
+    #   $key    - ключ для которого менять значение
+    #   $value  - значение, которое записать по пути
+    #   о
+    # Возврат:
+    #   $true если запись удачно, иначе $false.
+    #   Если key='': $true если путь есть или смогли создать, иначе $false
+    ##########################################################
+    #[bool] hidden setKeyValue([string]$path, [string]$key, [Object]$value){
+    #    return $this.isReadOnly;
+    #}
     [bool] hidden setKeyValue([string]$path, [string]$key, [Object]$value){
-        return $this.isReadOnly;
+        $result = $false;
+        if (!$this.isReadOnly) {
+            # здесь только если свойство isReadOnly = $True
+            try
+            {
+                $r = $this.readSection($path);
+                if ($r.code -ne 0)
+                {
+                    if ($r.code -eq 1) {
+                        # секции нет, создать ее
+
+                        $result = $true;
+                    }
+                    elseif ($r.code -eq 2)
+                    {
+                        # путь есть, но это не секция, а значение
+                        throw [System.AccessViolationException]::New('Нельзя записать $($key) по пути $($path), `
+                            т.к. путь не является секцией');
+                    }
+                    else
+                    {
+                        # неизвестная ошибка
+                        throw [System.Exception]::New('Неопределенная ошибка при запсис $($key) по пути $($path)');
+                    }
+                }
+                # записать значение, если присутствует key и он не равен ''
+                if ($key)
+                {
+                    # массив из строки 'sec1.sec2.sec3...
+                    $arrSections = $path.Split('.', [StringSplitOptions]::RemoveEmptyEntries);
+                    $s = '';
+                    $arrSections.foreach({
+                        $s += "['$( $_ )']";
+                        #Invoke-Expression -Command ('$c'+".CFG$s['key1']='value'")
+                    });
+                    if ($s)
+                    {
+                        Invoke-Expression -Command ('$this.CFG' + "$s['$( $key )']="+'$value');
+                        $result = $true;
+                    }
+                    #$this.CFG
+                }
+            }
+            catch
+            {
+                #$this.isExcept($this.errorAsException, "Error write $( $value ) in $( $key ) section $( $path )");
+                $result = $false;
+                if ($this.errorAsException) {throw $PSItem;};
+            }
+        }
+        return $result;
     }
 
     [bool] getBool([string]$path, [string]$key){
@@ -379,23 +455,6 @@ Class IniCFG : FileCFG {
         return $iniObj
     }
 	
-    [bool] hidden setKeyValue([string]$path, [string]$key, [Object]$value){
-        $result = $false;
-        if (!$this.isReadOnly)
-        {
-            try
-            {
-
-            }
-            catch
-            {
-                #$this.isExcept($this.errorAsException, "Error write $( $value ) in $( $key ) section $( $path )");
-                if ($this.errorAsException) {throw $PSItem;};
-            }
-        }
-        return $result;
-    }
-
     [Void] saveToFile([string]$filename, [bool]$isOverwrite){
         # проверить что каталога с таким именем.
         if (Test-Path $filename -PathType Container){
@@ -415,7 +474,12 @@ Class IniCFG : FileCFG {
             foreach ($key in $sections.Keys){
                 # здесь только если в секции есть ключи
                 $cSect = $sections[$key];
-                if ($this.isHashtable($cSect)) {
+                #if ($this.isHashtable($cSect))
+                if (
+                        ($cSect -is [Hashtable]) -or
+                        ($cSect -is [System.Collections.Specialized.OrderedDictionary])
+                    )
+                {
                     $data2file += "[$($Key)]";
                     $cSect.GetEnumerator() | ForEach-Object { #"{0}={1}" -f $_.key, $_.value }
                         $data2file += "$($_.key)=$($_.value)";
