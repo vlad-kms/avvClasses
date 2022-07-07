@@ -493,4 +493,4 @@ Class IniCFG : FileCFG {
             }
         } ### если были секции в hashtable
     }
-}
+} ### class 2
