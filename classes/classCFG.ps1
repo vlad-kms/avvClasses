@@ -44,7 +44,7 @@
 # Если в секции есть ключ, неважно есть или нет в [default], значение берется из секции,
 # кроме случая, если значение в секции = '_empty_', значение берется из [default].
 # В отличии от классического ini, есть поддержка вложенных Hashtable'ов.
-# TODO Пока нет чтения такого объекта из файла. Потом сделать для JSON. Наследовать от FileCFG
+# TODO Пока нет чтения такого объекта из файла. Потом сделать для JSON. Новый класс наследовать от FileCFG
 # TODO заменив соответствующие методы
 # Есть конструктор для создания из Hashtable. Входной объект добавляется через (+) в CFG.
 # Здесь и можно использовать вложенность.
@@ -72,8 +72,8 @@
 #
 # TODO
 # TODO Сделать функции:
-# TODO  setKeyValue         - запись значение в ключ секции
-# TODO  getCreateSectiong   - вернуть @{code=0;result=@{section}}, если секция существует
+# TODO  setKeyValue         - записать значение в ключ секции
+# TODO  getCreateSection    - вернуть @{code=0;result=@{section}}, если секция существует
 # TODO                                @{code=1;result@{newSection}}, если создали новую секцию
 # TODO                                @{code=10;result=@{}}, если не смогли создать секцию (где-то в цепочке
 # TODO                                  имен секций есть ключ, который не секция (Hashtable)
@@ -226,9 +226,49 @@ Class FileCFG {
     # Считать значение ключа, учитывая секцию default
     # Возврат:
     #   [Object] ''
-    #>
     [Object] hidden getKeyValue([string]$path, [string]$key){
         return '';
+    }
+    #>
+
+    <###############################################################################
+        Считать значение ключа, учитывая секцию default
+        Вход:
+            [string]$Path - имя секции
+            [string]$Key  - имя ключа
+        Возврат:
+            [string] Значение ключа.
+                     Если секция $Path отсутсвует, то ""
+                     Если ключ есть в требуемой секции, то возвращается значение этого ключа.
+                     Если ключа нет в требуемой секции, то возврат ключа из секции [default]
+                     Если ключа нет ни в требуемой секции, ни в секции [default], то возврат ""
+                     Если значение ключа = _empty_, то вернет пустую строку ''
+    ###############################################################################>
+    [Object]hidden getKeyValue([string]$path, [string]$key){
+        $result=''
+        $res = $this.readSection($path);
+        if ($res.code -ne 0 ) {
+            return $result
+        }
+        $section = $res.result;
+        if ($section.Contains($key) -and $section[$key]) {
+            $result=$section[$key]
+        } else {
+            try{
+                $result=$this.CFG.default[$key]
+            }
+            catch {
+                $result=""
+            }
+        }
+        !$this.isExcept($result.Length -eq 0, "Not found key $($key) in section name $($path)");
+        try{
+            if ($result.ToUpper() -eq '_empty_'.ToUpper()) { $result='' }
+        }
+        catch {
+            $result=''
+        };
+        return $result;
     }
 
     <# Записать значение ключа
@@ -339,41 +379,6 @@ Class IniCFG : FileCFG {
         return $iniObj
     }
 	
-    <###############################################################################
-        Считать значение ключа, учитывая секцию default
-        Вход:
-            [string]$Path - имя секции
-            [string]$Key  - имя ключа
-        Возврат:
-            [string] Значение ключа.
-                     Если секция $Path отсутсвует, то ""
-                     Если ключ есть в требуемой секции, то возвращается значение этого ключа.
-                     Если ключа нет в требуемой секции, то возврат ключа из секции [default]
-                     Если ключа нет ни в требуемой секции, ни в секции [default], то возврат ""
-                     Если значение ключа = _empty_, то вернет пустую строку ''
-    ###############################################################################>
-    [Object]hidden getKeyValue([string]$path, [string]$key){
-        $result=''
-        $res = $this.readSection($path);
-        if ($res.code -ne 0 ) {
-            return $result
-        }
-        $section = $res.result;
-        if ($section.Contains($key) -and $section[$key]) {
-            $result=$section[$key]
-        } else {
-            try{
-                $result=$this.CFG.default[$key]
-            }
-            catch {
-                $result=""
-            }
-        }
-        !$this.isExcept($result.Length -eq 0, "Not found key $($key) in section name $($path)");
-        if ($result.ToUpper() -eq '_empty_'.ToUpper()) { $result='' }
-        return $result
-    }
-
     [bool] hidden setKeyValue([string]$path, [string]$key, [Object]$value){
         $result = $false;
         if (!$this.isReadOnly)
