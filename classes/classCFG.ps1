@@ -1,6 +1,73 @@
+<#
+# Класс FileCFG базовый класс. Сам по себе бесполезен.
+# Класс IniCFG для работы с файлами .ini. Содержимое файла загружается в Hashtable.
+# Секции это ключи первого уровня, создаются из имен секций. Значения параметров секции
+# пишутся как ключи и значения в Hashtable. Если имя файла переданное в конструктор = '_empty_',
+# то инициализацию из файла пропустить, т.е. CFG после конструктора будет @{}
+# Например:
+ФАЙЛ ini
+    [default]
+    Token=<KEY API TELEGRAM>0
+    access_token=789
+    ExtVersion=ext
+    ClinicVersion=2
+    test=test
+    test1=test1
+
+    [dns_cli]
+    Token=$($Token)
+    access_token=$($ExtParams.Token)
+    ExtVersion=$($ExtParams.ExtVersion)
+    ClinicVersion=$($ExtParams.ClinicVersion)
+    ;Token=_empty_
+
+    [dns_cli1]
+    test1=_empty_
+    Hashtable
+    Name                           Value
+    ----                           -----
+    default                        {Token, access_token, ExtVersion, ClinicVersion...}
+    dns_cli                        {Token, access_token, ExtVersion, ClinicVersion}
+    dns_cli1                       {test1}
+
+    PS C:\Windows\system32> $c.CFG.default
+    Name                           Value
+    ----                           -----
+    Token                          <KEY API TELEGRAM>0
+    access_token                   789
+    ExtVersion                     ext
+    ClinicVersion                  2
+    test                           test
+    test1                          test1
+# Если имеется секция [default], то значение ключа формируется по правилам
+# Если в секции нет ключа, а в [default] есть, значение берется из [default].
+# Если в секции есть ключ, неважно есть или нет в [default], значение берется из секции,
+# кроме случая, если значение в секции = '_empty_', значение берется из [default].
+# В отличии от классического ini, есть поддержка вложенных Hashtable'ов.
+# TODO Пока нет чтения такого объекта из файла.
+# Есть конструктор для создания из Hashtable. Входной объект добавляется через (+) в CFG.
+# Здесь и можно использовать вложенность.
+# Поле ErrorAsException если True, то при чтении если нет ключа, ошибка преобразования в тип и т.д.
+# преобразуется в Exception, иначе возвращается пустая строка.
+# Функции:
+#   [Hashtable]readSection([string]$section) - считать секцию.
+#       Выход: @{
+#                   code: 0 - секция есть и ее считали
+#                   result: - считанная секция, т.е. ее ключи и значения
+#               }
+# Следующие методы считывают ключ в заданной секции. get<Type> работают через getKeyValue,
+# просто преобразуя результат в требуемый тип
+#   [Object] hidden getKeyValue([string]$path, [string]$key)
+#   [bool] getBool([string]$path, [string]$key){
+#   [string] getString([string]$path, [string]$key){
+#   [Int] getInt([string]$path, [string]$key){
+#   [long] getLong([string]$path, [string]$key){
+#
+#
+# #>
+
 <######################################
     [FileCFG]
-
 Правила именования Java
 #######################################>
 Class FileCFG {
@@ -38,16 +105,16 @@ Class FileCFG {
         $this.CFG=$CFG;
         $this.errorAsException=$EaE
     }
-    <##>
     <#
-		Инициализация. Проверить существование файла, считать данные из
-		файла в hashtable.
-		Exception, если не считали, или объект пустой 
+	#	Инициализация. Проверить существование файла, считать данные из
+	#	файла в hashtable. Если имя файла = '_empty_', то пропуск метода.
+	#	Exception, если не считали, или объект пустой
     #>
     [bool]initFileCFG() {
         $result=$false
         if ($this.filename.ToUpper() -ne '_EMPTY_' )
         {
+            # $this.filename != '_empty_'
             $this.isExcept(!$this.filename, $true, "Not defined Filename for file configuration.")
             $isFile = Test-Path -Path "$($this.filename)" -PathType Leaf
             $this.isExcept(!$isFile, $true, "Not exists file configuration: $($this.filename)")
@@ -83,12 +150,23 @@ Class FileCFG {
                 Если секция не существует, то в зависимости от errorAsException, либо пустой список,
                 либо формируется Exception
     #>
-	#[Hashtable]readSection([string]$section) {
     [Hashtable]readSection([string]$section) {
 		$result = @{};
         $code = 0;
+        # массив из строки 'sec1.sec2.sec3...
         $arrSections = $section.Split('.', [StringSplitOptions]::RemoveEmptyEntries);
         $path = $this.CFG;
+        # проверить для каждого из массива, что существует ключ и его значение есть Hashtable:
+        # как-то так
+        # sec1=@{
+        #           sec2=@{
+        #                   sec3=@{
+        #                       key1=val1
+        #                       key2=val2
+        #                           ...
+        #                   }
+        #           }
+        # }
         $arrSections.ForEach({
             if ( $path.Contains($_) -and
                     (
@@ -105,6 +183,8 @@ Class FileCFG {
                 $code = 1;
             }
         });
+        # ошибка и пустой Hashtable, если считанное значение не Hashtable.
+        # Т.е. убрали считывание ключа, оставили только секцию
         if (!($path -is [Hashtable]) -and
                 !($path -is [System.Collections.Specialized.OrderedDictionary])
             )
@@ -181,7 +261,9 @@ Class IniCFG : FileCFG {
     <##>
 
     <###############################################################################
-        Считать из файла данные
+    # Считать из файла данные.
+    # Если в файле указаны значения как $($str), "$str2", то такие значения будут
+    # вычислены, по правилам powershel, при чтении файла.
 	###############################################################################>
     [Hashtable]importInifile([string]$filename){
         $iniObj = [ordered]@{}
@@ -252,7 +334,7 @@ Class IniCFG : FileCFG {
             }
         }
         !$this.isExcept($result.Length -eq 0, "Not found key $($key) in section name $($path)");
-        if ($result -eq '_empty_') { $result='' }
+        if ($result.ToUpper() -eq '_empty_'.ToUpper()) { $result='' }
         return $result
     }
 }
