@@ -1,6 +1,72 @@
+<#
+# Класс FileCFG базовый класс. Сам по себе бесполезен.
+# Класс IniCFG для работы с файлами .ini. Содержимое файла загружается в Hashtable.
+# Секции это ключи первого уровня, создаются из имен секций. Значения параметров секции
+# пишутся как ключи и значения в Hashtable.
+# Например:
+ФАЙЛ ini
+    [default]
+    Token=<KEY API TELEGRAM>0
+    access_token=789
+    ExtVersion=ext
+    ClinicVersion=2
+    test=test
+    test1=test1
+
+    [dns_cli]
+    Token=$($Token)
+    access_token=$($ExtParams.Token)
+    ExtVersion=$($ExtParams.ExtVersion)
+    ClinicVersion=$($ExtParams.ClinicVersion)
+    ;Token=_empty_
+
+    [dns_cli1]
+    test1=_empty_
+    Hashtable
+    Name                           Value
+    ----                           -----
+    default                        {Token, access_token, ExtVersion, ClinicVersion...}
+    dns_cli                        {Token, access_token, ExtVersion, ClinicVersion}
+    dns_cli1                       {test1}
+
+    PS C:\Windows\system32> $c.CFG.default
+    Name                           Value
+    ----                           -----
+    Token                          <KEY API TELEGRAM>0
+    access_token                   789
+    ExtVersion                     ext
+    ClinicVersion                  2
+    test                           test
+    test1                          test1
+# Если имеется секция [default], то значение ключа формируется по правилам
+# Если в секции нет ключа, а в [default] есть, значение берется из [default].
+# Если в секции есть ключ, неважно есть или нет в [default], значение берется из секции,
+# кроме случая, если значение в секции = '_empty_', значение берется из [default].
+# В отличии от классического ini, есть поддержка вложенных Hashtable'ов.
+# TODO. Пока нет чтения такого объекта из файла.
+# Есть конструктор для создания из Hashtable. Входной объект добавляется через (+) в CFG.
+# Здесь и можно использовать вложенность.
+# Поле ErrorAsException если True, то при чтении если нет ключа, ошибка преобразования в тип и т.д.
+# преобразуется в Exception, иначе возвращается пустая строка.
+# Функции:
+#   [Hashtable]readSection([string]$section) - считать секцию.
+#       Выход: @{
+#                   code: 0 - секция есть и ее считали
+#                   result: - считанная секция, т.е. ее ключи и значения
+#               }
+# Следующие методы считывают ключ в заданной секции. get<Type> работают через getKeyValue,
+# просто преобразуя результат в требуемый тип
+#   [Object] hidden getKeyValue([string]$path, [string]$key)
+#   [bool] getBool([string]$path, [string]$key){
+#   [string] getString([string]$path, [string]$key){
+#   [Int] getInt([string]$path, [string]$key){
+#   [long] getLong([string]$path, [string]$key){
+#
+#
+# #>
+
 <######################################
     [FileCFG]
-
 Правила именования Java
 #######################################>
 Class FileCFG {
