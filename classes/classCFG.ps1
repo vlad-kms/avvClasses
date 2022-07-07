@@ -114,6 +114,7 @@ Class FileCFG {
         $result=$false
         if ($this.filename.ToUpper() -ne '_EMPTY_' )
         {
+            # $this.filename != '_empty_'
             $this.isExcept(!$this.filename, $true, "Not defined Filename for file configuration.")
             $isFile = Test-Path -Path "$($this.filename)" -PathType Leaf
             $this.isExcept(!$isFile, $true, "Not exists file configuration: $($this.filename)")
@@ -149,12 +150,23 @@ Class FileCFG {
                 ≈сли секци€ не существует, то в зависимости от errorAsException, либо пустой список,
                 либо формируетс€ Exception
     #>
-	#[Hashtable]readSection([string]$section) {
     [Hashtable]readSection([string]$section) {
 		$result = @{};
         $code = 0;
+        # массив из строки 'sec1.sec2.sec3...
         $arrSections = $section.Split('.', [StringSplitOptions]::RemoveEmptyEntries);
         $path = $this.CFG;
+        # проверить дл€ каждого из массива, что существует ключ и его значение есть Hashtable:
+        # как-то так
+        # sec1=@{
+        #           sec2=@{
+        #                   sec3=@{
+        #                       key1=val1
+        #                       key2=val2
+        #                           ...
+        #                   }
+        #           }
+        # }
         $arrSections.ForEach({
             if ( $path.Contains($_) -and
                     (
@@ -171,6 +183,8 @@ Class FileCFG {
                 $code = 1;
             }
         });
+        # ошибка и пустой Hashtable, если считанное значение не Hashtable.
+        # “.е. убрали считывание ключа, оставили только секцию
         if (!($path -is [Hashtable]) -and
                 !($path -is [System.Collections.Specialized.OrderedDictionary])
             )
