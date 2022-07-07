@@ -44,7 +44,8 @@
 # Если в секции есть ключ, неважно есть или нет в [default], значение берется из секции,
 # кроме случая, если значение в секции = '_empty_', значение берется из [default].
 # В отличии от классического ini, есть поддержка вложенных Hashtable'ов.
-# TODO Пока нет чтения такого объекта из файла.
+# TODO Пока нет чтения такого объекта из файла. Потом сделать для JSON. Наследовать от FileCFG
+# TODO заменив соответствующие методы
 # Есть конструктор для создания из Hashtable. Входной объект добавляется через (+) в CFG.
 # Здесь и можно использовать вложенность.
 # Поле ErrorAsException если True, то при чтении если нет ключа, ошибка преобразования в тип и т.д.
@@ -62,9 +63,22 @@
 #   [string] getString([string]$path, [string]$key){
 #   [Int] getInt([string]$path, [string]$key){
 #   [long] getLong([string]$path, [string]$key){
+#   saveToFile([string]$filename, [bool]$isOverwrite)
+#                       - записать в файл INI $filename секцию CFG. Записывается только первый уровень,
+#                         не пишутся ключи, значением которых является [Hashtable]
+#                         $isOverwrite показывает перезаписывать файл или нет
+#   saveToFile()          - то же что и выше, но записывается в файл $this.filename. По умолчанию $isOverwrite=$False
+#   saveToFile([bool]$isOverwrite)
 #
+# TODO
+# TODO Сделать функции:
+# TODO  setKeyValue         - запись значение в ключ секции
+# TODO  getCreateSectiong   - вернуть @{code=0;result=@{section}}, если секция существует
+# TODO                                @{code=1;result@{newSection}}, если создали новую секцию
+# TODO                                @{code=10;result=@{}}, если не смогли создать секцию (где-то в цепочке
+# TODO                                  имен секций есть ключ, который не секция (Hashtable)
 #
-# #>
+#>
 
 <######################################
     [FileCFG]
@@ -75,6 +89,7 @@ Class FileCFG {
     #[Hashtable]$CFG
     [Hashtable]$CFG=[ordered]@{}
 	[bool]$errorAsException = $false
+    [bool] hidden $isReadOnly=$true
 
     <#################################################
     #   Constructors
@@ -168,12 +183,13 @@ Class FileCFG {
         #           }
         # }
         $arrSections.ForEach({
-            if ( $path.Contains($_) -and
-                    (
-                        ($path[$_] -is [Hashtable]) -or
-                        ($path[$_] -is [System.Collections.Specialized.OrderedDictionary])
-                    )
-                )
+            #if ( $path.Contains($_) -and
+                    #(
+                    #    ($path[$_] -is [Hashtable]) -or
+                    #    ($path[$_] -is [System.Collections.Specialized.OrderedDictionary])
+                    #)
+                #)
+            if ( $path.Contains($_) -and $this.isHashtable($path[$_]) )
             {
                 $path = $path[$_];
             }
@@ -185,9 +201,10 @@ Class FileCFG {
         });
         # ошибка и пустой Hashtable, если считанное значение не Hashtable.
         # Т.е. убрали считывание ключа, оставили только секцию
-        if (!($path -is [Hashtable]) -and
-                !($path -is [System.Collections.Specialized.OrderedDictionary])
-            )
+        #if (!($path -is [Hashtable]) -and
+        #        !($path -is [System.Collections.Specialized.OrderedDictionary])
+        #    )
+        if (!($this.isHashtable($path)) )
         {
             $path = @{};
             $code = 1;
@@ -206,12 +223,19 @@ Class FileCFG {
 	}
     
     <#
-        Считать значение ключа, учитывая секцию default
-        Возврат:
-            [string] Пустая строка.
+    # Считать значение ключа, учитывая секцию default
+    # Возврат:
+    #   [Object] ''
     #>
     [Object] hidden getKeyValue([string]$path, [string]$key){
-        return ''
+        return '';
+    }
+
+    <# Записать значение ключа
+    #  Возврат: $true если запись удачно, иначе $false
+    #>
+    [bool] hidden setKeyValue([string]$path, [string]$key, [Object]$value){
+        return $this.isReadOnly;
     }
 
     [bool] getBool([string]$path, [string]$key){
@@ -227,6 +251,18 @@ Class FileCFG {
         return [long]$this.getKeyValue($path, $key)
     }
 
+    [Void] saveToFile(){
+        $this.saveToFile($this.filename, $false);
+    }
+    [Void] saveToFile([bool]$isOverwrite){
+        $this.saveToFile($this.filename, $isOverwrite);
+    }
+    [Void] saveToFile([string]$filename, [bool]$isOverwrite){
+    }
+
+    [bool] isHashtable([hashtable]$value){
+        return ($value -is [Hashtable]) -or ($value -is [System.Collections.Specialized.OrderedDictionary]);
+    }
 }
 
 <######################################
@@ -336,5 +372,56 @@ Class IniCFG : FileCFG {
         !$this.isExcept($result.Length -eq 0, "Not found key $($key) in section name $($path)");
         if ($result.ToUpper() -eq '_empty_'.ToUpper()) { $result='' }
         return $result
+    }
+
+    [bool] hidden setKeyValue([string]$path, [string]$key, [Object]$value){
+        $result = $false;
+        if (!$this.isReadOnly)
+        {
+            try
+            {
+
+            }
+            catch
+            {
+                #$this.isExcept($this.errorAsException, "Error write $( $value ) in $( $key ) section $( $path )");
+                if ($this.errorAsException) {throw $PSItem;};
+            }
+        }
+        return $result;
+    }
+
+    [Void] saveToFile([string]$filename, [bool]$isOverwrite){
+        # проверить что каталога с таким именем.
+        if (Test-Path $filename -PathType Container){
+            throw "Невозможно записать в файл, так как он является каталогом";
+        }
+        # проверить что файл с таким именем есть и перезапись запрешена.
+        if ( (Test-Path $filename -PathType Leaf) -and !$isOverwrite){
+            throw "Невозможно записать в файл, так как перезапись запрещена";
+        }
+        $sections=$this.readSection('.');
+        #$sections=$this.readSection('.'); # аналогичный результат
+        # проверить что смогли считать корневую секцию CFG
+        if ($sections.code -eq 0) {
+            # считали секцию CFG
+            $data2file=@();
+            $sections=$sections.result;
+            foreach ($key in $sections.Keys){
+                # здесь только если в секции есть ключи
+                $cSect = $sections[$key];
+                if ($this.isHashtable($cSect)) {
+                    $data2file += "[$($Key)]";
+                    $cSect.GetEnumerator() | ForEach-Object { #"{0}={1}" -f $_.key, $_.value }
+                        $data2file += "$($_.key)=$($_.value)";
+
+                    }
+                }
+            }
+            # записать в файл, если в массиве есть данные
+            if ($data2file.Count -gt 0) {
+                $data2file | Out-File -FilePath $filename -Force -Encoding default;
+            }
+        } ### если были секции в hashtable
     }
 }
