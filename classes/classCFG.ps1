@@ -1,5 +1,7 @@
 <#
 # Класс FileCFG базовый класс. Сам по себе бесполезен.
+# Может считывать, записывать, добавлять ключи, значения, секции.
+# Для записи требуется сначала установить свойство isReadOnly в $False.
 # Класс IniCFG для работы с файлами .ini. Содержимое файла загружается в Hashtable.
 # Секции это ключи первого уровня, создаются из имен секций. Значения параметров секции
 # пишутся как ключи и значения в Hashtable. Если имя файла переданное в конструктор = '_empty_',
@@ -109,11 +111,11 @@ Class FileCFG {
     }
     <##>
     FileCFG([Hashtable]$CFG) {
-        $this.CFG=$CFG;
+        $this.CFG += $CFG;
     }
     FileCFG([Hashtable]$CFG, [bool]$EaE) {
-        $this.CFG=$CFG;
-        $this.errorAsException=$EaE
+        $this.CFG += $CFG;
+        $this.errorAsException = $EaE
     }
     <#
 	#	Инициализация. Проверить существование файла, считать данные из
@@ -405,12 +407,11 @@ Class IniCFG : FileCFG {
         #$this.errorAsException=$EaE
         #$res=$this.initFileCFG();
     }
-    <##>
-    IniCFG([String]$FN, [bool]$EaE, [Hashtable]$CFG) : base ($FN, $EaE) {
+    IniCFG([String]$FN, [bool]$EaE, [Hashtable]$CFG) : base ("_empty_", $EaE) {
     #IniCFG([Hashtable]$CFG, [bool]$EaE) {
+        #$FN = '_empty';
         $this.CFG += $CFG;
     }
-    <##>
 
     <###############################################################################
     # Считать из файла данные.
@@ -456,7 +457,12 @@ Class IniCFG : FileCFG {
     }
 	
     [Void] saveToFile([string]$filename, [bool]$isOverwrite){
-        # проверить что каталога с таким именем.
+        # если $this.filename = '_empty_' или пустой строке, то выход
+        if (!$filename -or ($filename.ToUpper() -eq '_empty_'.ToUpper() ))
+        {
+            return;
+        }
+        # проверить что каталога с таким именем нет.
         if (Test-Path $filename -PathType Container){
             throw "Невозможно записать в файл, так как он является каталогом";
         }
