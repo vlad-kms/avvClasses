@@ -415,26 +415,38 @@ Class IniCFG : FileCFG {
 
     <###############################################################################
     # Считать из файла данные.
-    # Если в файле указаны значения как $($str), "$str2", то такие значения будут
-    # вычислены, по правилам powershel, при чтении файла.
+    # Строки [name] (SECTION) расцениваются как секция $section. Т.е. в [hashtable] вставляется как
+    # встроенная [hashtable]. 1-е условие в switch
+    # Строки вида name=value (PARAMETER) расцениваются как параметр в секции $key=$value.
+    # Т.е. вставляется как параметр(ключ) в [hashtable][$section]. 2-е условие в switch
+    # Строки начинающиеся с ';' ,'#', '*' (COMMENT) не обрабатываются,
+    # т.е. используем для комментариев.  3-е условие в switch
+    #
+    # Если в строке типа PARAMETER указаны значения ($value) как $($str), "$str2", то такие значения будут
+    # вычислены, по правилам powershel, при чтении файла. Например в файле есть key1="$nameVariable",
+    # при обработке эnа строка будет вычислена, если в скрипте есть переменная
+    # $nameVariable=valueVariable. Если переменной нет, то будет пусто.
+    # то в [hashtable][$section][$key] будет прописано значение valueVariable.
 	###############################################################################>
     [Hashtable]importInifile([string]$filename){
         $iniObj = [ordered]@{}
         $section=""
         switch -regex -File $filename {
             "^\[(.+)\]$" {
+                # строки вида:
+                # [name]
                 $section = $matches[1]
                 $iniObj[$section] = [ordered]@{}
                 #Continue
             }
             "(?<key>^[^\#\;\=]*)[=?](?<value>.+)" {
+                # строки вида:
+                # name=value, name=$(value), name="value",
+                # где value - вычисляемое выражение, переменная скрипта
                 $key  = $matches.key.Trim()
                 $value  = $matches.value.Trim()
 
                 if ( ($value -like '$(*)') -or ($value -like '"*"') ) {
-                    # в INI могут использоваться переменные (команды) из скрипта 
-                    # key1=$($var1)
-                    # key2="$var1"
                     $value = Invoke-Expression $value
                 }
                 if ( $section ) {
@@ -445,6 +457,9 @@ Class IniCFG : FileCFG {
                 continue
             }
             "(?<key>^[^\#\;\=]*)[=?]" {
+                # строки вида:
+                # name=
+                # т.е. пустые
                 $key  = $matches.key.Trim()
                 if ( $section ) {
                     $iniObj[$section][$key] = ""
