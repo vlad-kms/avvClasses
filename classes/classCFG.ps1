@@ -109,7 +109,15 @@ Class FileCFG {
 		$this.errorAsException=$EaE
         $this.initFileCFG();
     }
-    <##>
+
+    FileCFG([string]$FN, [bool]$EaE, [Hashtable]$CFG) {
+        $FN = '_empty_';
+        $this.filename = $FN;
+        $this.errorAsException = $EaE
+        $this.initFileCFG();
+        $this.CFG += $CFG;
+    }
+    <#
     FileCFG([Hashtable]$CFG) {
         $this.CFG += $CFG;
     }
@@ -117,6 +125,7 @@ Class FileCFG {
         $this.CFG += $CFG;
         $this.errorAsException = $EaE
     }
+    #>
     <#
 	#	Инициализация. Проверить существование файла, считать данные из
 	#	файла в hashtable. Если имя файла = '_empty_', то пропуск метода.
@@ -137,12 +146,10 @@ Class FileCFG {
         return $result
     }
     
-    <##>
     [Hashtable]importInifile([string]$filename){
         return [ordered]@{}
     }
 
-    <##>
     [string]isExcept ([bool]$Value, [string]$Msg) {
         return $this.isExcept($Value, $this.errorAsException, $Msg)
     }
@@ -235,15 +242,6 @@ Class FileCFG {
 		return $result;
 	}
     
-    <#
-    # Считать значение ключа, учитывая секцию default
-    # Возврат:
-    #   [Object] ''
-    [Object] hidden getKeyValue([string]$path, [string]$key){
-        return '';
-    }
-    #>
-
     <###############################################################################
         Считать значение ключа, учитывая секцию default
         Вход:
@@ -383,51 +381,42 @@ Class FileCFG {
     }
 }
 
-<######################################
-    [IniCFG]
-    Объект для работы с файлом форматов ini
-#######################################>
+######################################
+#    [IniCFG]
+#    Объект для работы с файлом форматов ini
+#######################################
 Class IniCFG : FileCFG {
-
     IniCFG() : base() {
-        #$this.filename=$PSCommandPath + '.cfg'
-        #$res=$this.initFileCFG();
     }
     IniCFG([bool]$EaE) : base($EaE) {
-        #$this.filename=$PSCommandPath + '.cfg'
-        #$this.errorAsException=$EaE
-        #$res=$this.initFileCFG();
     }
     IniCFG([string]$FN) : base($FN) {
-        #$this.filename=$FN;
-        #$res=$this.initFileCFG();
     }
     IniCFG([string]$FN, [bool]$EaE) : base($FN, $EaE) {
-        #$this.filename=$FN;
-        #$this.errorAsException=$EaE
-        #$res=$this.initFileCFG();
     }
-    IniCFG([String]$FN, [bool]$EaE, [Hashtable]$CFG) : base ("_empty_", $EaE) {
-    #IniCFG([Hashtable]$CFG, [bool]$EaE) {
-        #$FN = '_empty';
+    IniCFG([string]$FN, [bool]$EaE, [Hashtable]$CFG){#} : base("_empty_", $EaE, $CFG) {
+        $FN = '_empty_';
+        $this.filename = $FN;
+        $this.errorAsException = $EaE
+        $this.initFileCFG();
         $this.CFG += $CFG;
     }
 
-    <###############################################################################
+    ###############################################################################
     # Считать из файла данные.
-    # Строки [name] (SECTION) расцениваются как секция $section. Т.е. в [hashtable] вставляется как
+    # Строки [name] (SECTION) расцениваются как секция section. Т.е. в [hashtable] вставляется как
     # встроенная [hashtable]. 1-е условие в switch
-    # Строки вида name=value (PARAMETER) расцениваются как параметр в секции $key=$value.
-    # Т.е. вставляется как параметр(ключ) в [hashtable][$section]. 2-е условие в switch
+    # Строки вида name=value (PARAMETER) расцениваются как параметр в секции key=value.
+    # Т.е. вставляется как параметр(ключ) в [hashtable][section]. 2-е условие в switch
     # Строки начинающиеся с ';' ,'#', '*' (COMMENT) не обрабатываются,
     # т.е. используем для комментариев.  3-е условие в switch
     #
-    # Если в строке типа PARAMETER указаны значения ($value) как $($str), "$str2", то такие значения будут
-    # вычислены, по правилам powershel, при чтении файла. Например в файле есть key1="$nameVariable",
+    # Если в строке типа PARAMETER указаны значения (value) как '$($str)', '"$str2"', то такие значения будут
+    # вычислены, по правилам powershel, при чтении файла. Например в файле есть key1="nameVariable",
     # при обработке эnа строка будет вычислена, если в скрипте есть переменная
     # $nameVariable=valueVariable. Если переменной нет, то будет пусто.
     # то в [hashtable][$section][$key] будет прописано значение valueVariable.
-	###############################################################################>
+	###############################################################################
     [Hashtable]importInifile([string]$filename){
         $iniObj = [ordered]@{}
         $section=""
@@ -515,3 +504,9 @@ Class IniCFG : FileCFG {
         } ### если были секции в hashtable
     }
 } ### class 4
+
+class JsonCFG : FileCFG {
+    # TODO переопределить конструкторы,
+    # TODO [bool]initFileCFG() {
+    # TODO [Void] saveToFile([string]$filename, [bool]$isOverwrite){
+}
