@@ -109,7 +109,15 @@ Class FileCFG {
 		$this.errorAsException=$EaE
         $this.initFileCFG();
     }
-    <##>
+
+    FileCFG([string]$FN, [bool]$EaE, [Hashtable]$CFG) {
+        $FN = '_empty_';
+        $this.filename = $FN;
+        $this.errorAsException = $EaE
+        $this.initFileCFG();
+        $this.CFG += $CFG;
+    }
+    <#
     FileCFG([Hashtable]$CFG) {
         $this.CFG += $CFG;
     }
@@ -117,6 +125,7 @@ Class FileCFG {
         $this.CFG += $CFG;
         $this.errorAsException = $EaE
     }
+    #>
     <#
 	#	Инициализация. Проверить существование файла, считать данные из
 	#	файла в hashtable. Если имя файла = '_empty_', то пропуск метода.
@@ -137,12 +146,10 @@ Class FileCFG {
         return $result
     }
     
-    <##>
     [Hashtable]importInifile([string]$filename){
         return [ordered]@{}
     }
 
-    <##>
     [string]isExcept ([bool]$Value, [string]$Msg) {
         return $this.isExcept($Value, $this.errorAsException, $Msg)
     }
@@ -190,10 +197,10 @@ Class FileCFG {
             #if ( $path.Contains($_) -and $this.isHashtable($path[$_]) )
             if ( $path.Contains($_) )
             {
-                if ( ($path[$_] -is [Hashtable]) -or
-                     ($path[$_] -is [System.Collections.Specialized.OrderedDictionary])
-                    )
-
+                #if ( ($path[$_] -is [Hashtable]) -or
+                #     ($path[$_] -is [System.Collections.Specialized.OrderedDictionary])
+                #    )
+                if ($this.isHashtable($path[$_]))
                 {
                     $path = $path[$_];
                 }
@@ -213,10 +220,10 @@ Class FileCFG {
         });
         # ошибка и пустой Hashtable, если считанное значение не Hashtable.
         # Т.е. убрали считывание ключа, оставили только секцию
-        if (!($path -is [Hashtable]) -and
-                !($path -is [System.Collections.Specialized.OrderedDictionary])
-            )
-        #if (!($this.isHashtable($path)) )
+        #if (!($path -is [Hashtable]) -and
+        #        !($path -is [System.Collections.Specialized.OrderedDictionary])
+        #    )
+        if (!($this.isHashtable($path)) )
         {
             # последний элемент в пути не является [Hashtable]
             $path = @{};
@@ -235,15 +242,6 @@ Class FileCFG {
 		return $result;
 	}
     
-    <#
-    # Считать значение ключа, учитывая секцию default
-    # Возврат:
-    #   [Object] ''
-    [Object] hidden getKeyValue([string]$path, [string]$key){
-        return '';
-    }
-    #>
-
     <###############################################################################
         Считать значение ключа, учитывая секцию default
         Вход:
@@ -378,63 +376,67 @@ Class FileCFG {
     [Void] saveToFile([string]$filename, [bool]$isOverwrite){
     }
 
-    [bool] isHashtable([hashtable]$value){
-        return ($value -is [Hashtable]) -or ($value -is [System.Collections.Specialized.OrderedDictionary]);
+    [bool] isHashtable($value){
+        #return ($value -is [Hashtable]) -or ($value -is [System.Collections.Specialized.OrderedDictionary]);
+        return ($value -is [System.Collections.IDictionary]);
     }
 }
 
-<######################################
-    [IniCFG]
-    Объект для работы с файлом форматов ini
-#######################################>
+######################################
+#    [IniCFG]
+#    Объект для работы с файлом форматов ini
+#######################################
 Class IniCFG : FileCFG {
-
     IniCFG() : base() {
-        #$this.filename=$PSCommandPath + '.cfg'
-        #$res=$this.initFileCFG();
     }
     IniCFG([bool]$EaE) : base($EaE) {
-        #$this.filename=$PSCommandPath + '.cfg'
-        #$this.errorAsException=$EaE
-        #$res=$this.initFileCFG();
     }
     IniCFG([string]$FN) : base($FN) {
-        #$this.filename=$FN;
-        #$res=$this.initFileCFG();
     }
     IniCFG([string]$FN, [bool]$EaE) : base($FN, $EaE) {
-        #$this.filename=$FN;
-        #$this.errorAsException=$EaE
-        #$res=$this.initFileCFG();
     }
-    IniCFG([String]$FN, [bool]$EaE, [Hashtable]$CFG) : base ("_empty_", $EaE) {
-    #IniCFG([Hashtable]$CFG, [bool]$EaE) {
-        #$FN = '_empty';
-        $this.CFG += $CFG;
+    IniCFG([string]$FN, [bool]$EaE, [Hashtable]$CFG) {#} : base("_empty_", $EaE, $CFG) {
+        if ($this.isHashtable($CFG)) { $FN = '_empty_'; }
+        $this.filename = $FN;
+        $this.errorAsException = $EaE
+        $this.initFileCFG();
+        if ($this.isHashtable($CFG)) { $this.CFG += $CFG; }
     }
 
-    <###############################################################################
+    ###############################################################################
     # Считать из файла данные.
-    # Если в файле указаны значения как $($str), "$str2", то такие значения будут
-    # вычислены, по правилам powershel, при чтении файла.
-	###############################################################################>
+    # Строки [name] (SECTION) расцениваются как секция section. Т.е. в [hashtable] вставляется как
+    # встроенная [hashtable]. 1-е условие в switch
+    # Строки вида name=value (PARAMETER) расцениваются как параметр в секции key=value.
+    # Т.е. вставляется как параметр(ключ) в [hashtable][section]. 2-е условие в switch
+    # Строки начинающиеся с ';' ,'#', '*' (COMMENT) не обрабатываются,
+    # т.е. используем для комментариев.  3-е условие в switch
+    #
+    # Если в строке типа PARAMETER указаны значения (value) как '$($str)', '"$str2"', то такие значения будут
+    # вычислены, по правилам powershel, при чтении файла. Например в файле есть key1="nameVariable",
+    # при обработке эnа строка будет вычислена, если в скрипте есть переменная
+    # $nameVariable=valueVariable. Если переменной нет, то будет пусто.
+    # то в [hashtable][$section][$key] будет прописано значение valueVariable.
+	###############################################################################
     [Hashtable]importInifile([string]$filename){
         $iniObj = [ordered]@{}
         $section=""
         switch -regex -File $filename {
             "^\[(.+)\]$" {
+                # строки вида:
+                # [name]
                 $section = $matches[1]
                 $iniObj[$section] = [ordered]@{}
                 #Continue
             }
             "(?<key>^[^\#\;\=]*)[=?](?<value>.+)" {
+                # строки вида:
+                # name=value, name=$(value), name="value",
+                # где value - вычисляемое выражение, переменная скрипта
                 $key  = $matches.key.Trim()
                 $value  = $matches.value.Trim()
 
                 if ( ($value -like '$(*)') -or ($value -like '"*"') ) {
-                    # в INI могут использоваться переменные (команды) из скрипта 
-                    # key1=$($var1)
-                    # key2="$var1"
                     $value = Invoke-Expression $value
                 }
                 if ( $section ) {
@@ -445,6 +447,9 @@ Class IniCFG : FileCFG {
                 continue
             }
             "(?<key>^[^\#\;\=]*)[=?]" {
+                # строки вида:
+                # name=
+                # т.е. пустые
                 $key  = $matches.key.Trim()
                 if ( $section ) {
                     $iniObj[$section][$key] = ""
@@ -480,11 +485,11 @@ Class IniCFG : FileCFG {
             foreach ($key in $sections.Keys){
                 # здесь только если в секции есть ключи
                 $cSect = $sections[$key];
-                #if ($this.isHashtable($cSect))
-                if (
-                        ($cSect -is [Hashtable]) -or
-                        ($cSect -is [System.Collections.Specialized.OrderedDictionary])
-                    )
+                if ($this.isHashtable($cSect))
+                #if (
+                #        ($cSect -is [Hashtable]) -or
+                #        ($cSect -is [System.Collections.Specialized.OrderedDictionary])
+                #    )
                 {
                     $data2file += "[$($Key)]";
                     $cSect.GetEnumerator() | ForEach-Object { #"{0}={1}" -f $_.key, $_.value }
@@ -500,3 +505,45 @@ Class IniCFG : FileCFG {
         } ### если были секции в hashtable
     }
 } ### class 4
+
+class JsonCFG : FileCFG
+{
+    JsonCFG(): base()
+    {
+    }
+    JsonCFG([bool]$EaE): base($EaE)
+    {
+    }
+    JsonCFG([string]$FN): base($FN)
+    {
+    }
+    JsonCFG([string]$FN, [bool]$EaE): base($FN, $EaE)
+    {
+    }
+    JsonCFG([string]$FN, [bool]$EaE, [Hashtable]$CFG)
+    {
+        if ($this.isHashtable($CFG)) { $FN = '_empty_'; }
+        $this.filename = $FN;
+        $this.errorAsException = $EaE
+        $this.initFileCFG();
+        if ($this.isHashtable($CFG)) { $this.CFG += $CFG; }
+    }
+    # TODO [bool]initFileCFG() {
+    [Hashtable]
+    importInifile([string]$filename)
+    {
+        $iniObj = [ordered]@{}
+        $section=""
+        if ($filename -or ($filename.ToUpper() -ne "_empty_".ToUpper()) ) {
+            # filename не пустой и не равен '_empty'
+
+        }
+        return $iniObj;
+    }
+    # TODO [Void] saveToFile([string]$filename, [bool]$isOverwrite){
+    [Void]
+    saveToFile([string]$filename, [bool]$isOverwrite)
+    {
+
+    }
+}
