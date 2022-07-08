@@ -197,10 +197,10 @@ Class FileCFG {
             #if ( $path.Contains($_) -and $this.isHashtable($path[$_]) )
             if ( $path.Contains($_) )
             {
-                if ( ($path[$_] -is [Hashtable]) -or
-                     ($path[$_] -is [System.Collections.Specialized.OrderedDictionary])
-                    )
-
+                #if ( ($path[$_] -is [Hashtable]) -or
+                #     ($path[$_] -is [System.Collections.Specialized.OrderedDictionary])
+                #    )
+                if ($this.isHashtable($path[$_]))
                 {
                     $path = $path[$_];
                 }
@@ -220,10 +220,10 @@ Class FileCFG {
         });
         # ошибка и пустой Hashtable, если считанное значение не Hashtable.
         # Т.е. убрали считывание ключа, оставили только секцию
-        if (!($path -is [Hashtable]) -and
-                !($path -is [System.Collections.Specialized.OrderedDictionary])
-            )
-        #if (!($this.isHashtable($path)) )
+        #if (!($path -is [Hashtable]) -and
+        #        !($path -is [System.Collections.Specialized.OrderedDictionary])
+        #    )
+        if (!($this.isHashtable($path)) )
         {
             # последний элемент в пути не является [Hashtable]
             $path = @{};
@@ -376,8 +376,9 @@ Class FileCFG {
     [Void] saveToFile([string]$filename, [bool]$isOverwrite){
     }
 
-    [bool] isHashtable([hashtable]$value){
-        return ($value -is [Hashtable]) -or ($value -is [System.Collections.Specialized.OrderedDictionary]);
+    [bool] isHashtable($value){
+        #return ($value -is [Hashtable]) -or ($value -is [System.Collections.Specialized.OrderedDictionary]);
+        return ($value -is [System.Collections.IDictionary]);
     }
 }
 
@@ -394,12 +395,12 @@ Class IniCFG : FileCFG {
     }
     IniCFG([string]$FN, [bool]$EaE) : base($FN, $EaE) {
     }
-    IniCFG([string]$FN, [bool]$EaE, [Hashtable]$CFG){#} : base("_empty_", $EaE, $CFG) {
-        $FN = '_empty_';
+    IniCFG([string]$FN, [bool]$EaE, [Hashtable]$CFG) {#} : base("_empty_", $EaE, $CFG) {
+        if ($this.isHashtable($CFG)) { $FN = '_empty_'; }
         $this.filename = $FN;
         $this.errorAsException = $EaE
         $this.initFileCFG();
-        $this.CFG += $CFG;
+        if ($this.isHashtable($CFG)) { $this.CFG += $CFG; }
     }
 
     ###############################################################################
@@ -484,11 +485,11 @@ Class IniCFG : FileCFG {
             foreach ($key in $sections.Keys){
                 # здесь только если в секции есть ключи
                 $cSect = $sections[$key];
-                #if ($this.isHashtable($cSect))
-                if (
-                        ($cSect -is [Hashtable]) -or
-                        ($cSect -is [System.Collections.Specialized.OrderedDictionary])
-                    )
+                if ($this.isHashtable($cSect))
+                #if (
+                #        ($cSect -is [Hashtable]) -or
+                #        ($cSect -is [System.Collections.Specialized.OrderedDictionary])
+                #    )
                 {
                     $data2file += "[$($Key)]";
                     $cSect.GetEnumerator() | ForEach-Object { #"{0}={1}" -f $_.key, $_.value }
@@ -505,8 +506,44 @@ Class IniCFG : FileCFG {
     }
 } ### class 4
 
-class JsonCFG : FileCFG {
-    # TODO переопределить конструкторы,
+class JsonCFG : FileCFG
+{
+    JsonCFG(): base()
+    {
+    }
+    JsonCFG([bool]$EaE): base($EaE)
+    {
+    }
+    JsonCFG([string]$FN): base($FN)
+    {
+    }
+    JsonCFG([string]$FN, [bool]$EaE): base($FN, $EaE)
+    {
+    }
+    JsonCFG([string]$FN, [bool]$EaE, [Hashtable]$CFG)
+    {
+        if ($this.isHashtable($CFG)) { $FN = '_empty_'; }
+        $this.filename = $FN;
+        $this.errorAsException = $EaE
+        $this.initFileCFG();
+        if ($this.isHashtable($CFG)) { $this.CFG += $CFG; }
+    }
     # TODO [bool]initFileCFG() {
+    [Hashtable]
+    importInifile([string]$filename)
+    {
+        $iniObj = [ordered]@{}
+        $section=""
+        if ($filename -or ($filename.ToUpper() -ne "_empty_".ToUpper()) ) {
+            # filename не пустой и не равен '_empty'
+
+        }
+        return $iniObj;
+    }
     # TODO [Void] saveToFile([string]$filename, [bool]$isOverwrite){
+    [Void]
+    saveToFile([string]$filename, [bool]$isOverwrite)
+    {
+
+    }
 }
