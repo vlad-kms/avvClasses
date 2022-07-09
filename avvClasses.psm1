@@ -79,6 +79,9 @@ function Get-AvvClass {
     }
 }
 
+#################### ConvertJSONToHash #########################
+# Конвертирует PSCustomObject в Hashtable, включая все вложенные свойства,
+# имеющие тип PSCustomObject
 function ConvertJSONToHash{
     param(
         [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true)]
@@ -88,7 +91,6 @@ function ConvertJSONToHash{
     $hash = @{};
     $keys = $root | Get-Member -MemberType NoteProperty | Select-Object -exp Name;
     $keys | %{
-        #$key=$_;
         $obj=$root.$($_);
         if($obj -is [PSCustomObject])
         {
@@ -104,7 +106,7 @@ function ConvertJSONToHash{
 }
 
 function ConvertFrom-JsonToHashtable {
-    <#
+    <# TODO НЕ РАБОТАЕТ, ТОЛКО первый уровень вложенности.
     .SYNOPSIS
         Helper function to take a JSON string and turn it into a hashtable
     .DESCRIPTION
