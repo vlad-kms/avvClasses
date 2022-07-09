@@ -404,10 +404,10 @@ Class FileCFG {
     }
 
     ################## toJson ###########################
-    [String] toString(){
+    [String] ToString(){
         return $this.ToJson();
     }
-    [String] toJson() {
+    [String] ToJson() {
         return ($this | ConvertTo-Json -Depth 100);
     }
 }
