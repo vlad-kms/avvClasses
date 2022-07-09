@@ -92,11 +92,11 @@ Class FileCFG {
     #   Constructors
     #################################################>
     FileCFG(){
-        $this.filename=$PSCommandPath + '.cfg'
+        $this.filename=$PSCommandPath + $this.getExtensionForClass();
         $this.initFileCFG();
     }
     FileCFG([bool]$EaE){
-        $this.filename=$PSCommandPath + '.cfg'
+        $this.filename=$PSCommandPath + $this.getExtensionForClass();
 		$this.errorAsException=$EaE
         $this.initFileCFG();
     }
@@ -117,7 +117,6 @@ Class FileCFG {
         $this.initFileCFG();
         $this.CFG += $CFG;
     }
-    <#
     FileCFG([Hashtable]$CFG) {
         $this.CFG += $CFG;
     }
@@ -125,25 +124,44 @@ Class FileCFG {
         $this.CFG += $CFG;
         $this.errorAsException = $EaE
     }
-    #>
+
+    [String] getExtensionForClass()
+    {
+        $type = $this.GetType();
+        if (($type.Name.ToUpper() -eq "JsonCFG".ToUpper()))
+        {
+            $res = '.json';
+        }
+        elseif ($type.Name.ToUpper() -eq "INICFG".ToUpper())
+        {
+            $res = '.ini';
+        }
+        else
+        {
+            $res = '.cfg';
+        }
+        return $res;
+    }
     <#
 	#	Инициализация. Проверить существование файла, считать данные из
 	#	файла в hashtable. Если имя файла = '_empty_', то пропуск метода.
 	#	Exception, если не считали, или объект пустой
     #>
     [bool]initFileCFG() {
-        $result=$false
+        $result=$false;
         if ($this.filename.ToUpper() -ne '_EMPTY_' )
         {
-            # $this.filename != '_empty_'
-            $this.isExcept(!$this.filename, $true, "Not defined Filename for file configuration.")
-            $isFile = Test-Path -Path "$($this.filename)" -PathType Leaf
-            $this.isExcept(!$isFile, $true, "Not exists file configuration: $($this.filename)")
-	        $this.CFG=$this.importInifile($this.filename)
-            $result=($this.CFG.Count -ne 0)
-            $this.isExcept(!$result, "Error parsing file CFG: $($this.filename)")
+            # $this.filename != '_empty_';
+            #$this.isExcept(!$this.filename, $true, "Not defined Filename for file configuration.");
+            $this.isExcept(!$this.filename, "Not defined Filename for file configuration.");
+            $isFile = Test-Path -Path "$($this.filename)" -PathType Leaf;
+            #$this.isExcept(!$isFile, $true, "Not exists file configuration: $($this.filename)");
+            $this.isExcept(!$isFile, "Not exists file configuration: $($this.filename)");
+	        $this.CFG=$this.importInifile($this.filename);
+            $result=$this.CFG.Count;
+            #$this.isExcept(!$result, "Error parsing file CFG: $($this.filename)")
         }
-        return $result
+        return $result;
     }
     
     [Hashtable]importInifile([string]$filename){
@@ -420,44 +438,59 @@ Class IniCFG : FileCFG {
 	###############################################################################
     [Hashtable]importInifile([string]$filename){
         $iniObj = [ordered]@{}
-        $section=""
-        switch -regex -File $filename {
-            "^\[(.+)\]$" {
-                # строки вида:
-                # [name]
-                $section = $matches[1]
-                $iniObj[$section] = [ordered]@{}
-                #Continue
-            }
-            "(?<key>^[^\#\;\=]*)[=?](?<value>.+)" {
-                # строки вида:
-                # name=value, name=$(value), name="value",
-                # где value - вычисляемое выражение, переменная скрипта
-                $key  = $matches.key.Trim()
-                $value  = $matches.value.Trim()
+        $this.isExcept(!$filename, "Not defined Filename for file configuration.")
+        $isFile = Test-Path -Path "$($filename)" -PathType Leaf
+        $this.isExcept(!$isFile, "Not exists file configuration: $($filename)")
+        if ($isFile)
+        {
+            # если файл существует и он не каталог.
+            $section = ""
+            switch -regex -File $filename
+            {
+                "^\[(.+)\]$" {
+                    # строки вида:
+                    # [name]
+                    $section = $matches[1]
+                    $iniObj[$section] = [ordered]@{ }
+                    #Continue
+                }
+                "(?<key>^[^\#\;\=]*)[=?](?<value>.+)" {
+                    # строки вида:
+                    # name=value, name=$(value), name="value",
+                    # где value - вычисляемое выражение, переменная скрипта
+                    $key = $matches.key.Trim()
+                    $value = $matches.value.Trim()
 
-                if ( ($value -like '$(*)') -or ($value -like '"*"') ) {
-                    $value = Invoke-Expression $value
+                    if (($value -like '$(*)') -or ($value -like '"*"'))
+                    {
+                        $value = Invoke-Expression $value
+                    }
+                    if ($section)
+                    {
+                        $iniObj[$section][$key] = $value
+                    }
+                    else
+                    {
+                        $iniObj[$key] = $value
+                    }
+                    continue
                 }
-                if ( $section ) {
-                    $iniObj[$section][$key] = $value
-                } else {
-                    $iniObj[$key] = $value
+                "(?<key>^[^\#\;\=]*)[=?]" {
+                    # строки вида:
+                    # name=
+                    # т.е. пустые
+                    $key = $matches.key.Trim()
+                    if ($section)
+                    {
+                        $iniObj[$section][$key] = ""
+                    }
+                    else
+                    {
+                        $iniObj[$key] = ""
+                    }
                 }
-                continue
-            }
-            "(?<key>^[^\#\;\=]*)[=?]" {
-                # строки вида:
-                # name=
-                # т.е. пустые
-                $key  = $matches.key.Trim()
-                if ( $section ) {
-                    $iniObj[$section][$key] = ""
-                } else {
-                    $iniObj[$key] = ""
-                }
-            }
-        } ### switch -regex -File $IniFile {
+            } ### switch -regex -File $IniFile {
+        } ## if ($isFile)
         return $iniObj
     }
 	
@@ -528,22 +561,36 @@ class JsonCFG : FileCFG
         $this.initFileCFG();
         if ($this.isHashtable($CFG)) { $this.CFG += $CFG; }
     }
-    # TODO [bool]initFileCFG() {
+
     [Hashtable]
     importInifile([string]$filename)
     {
         $iniObj = [ordered]@{}
-        $section=""
-        if ($filename -or ($filename.ToUpper() -ne "_empty_".ToUpper()) ) {
+        if ($filename -or ($filename.ToUpper() -ne "_empty_".ToUpper()) )
+        {
             # filename не пустой и не равен '_empty'
-
+            #$majV = $avvVersion.Major;
+            $json = (Get-Content -Path $filename -Raw);
+            #$json = ( (Get-Content -Path $filename -Raw) | ConvertFrom-JsonToHashtable -casesensitive );
+            $majV = (Get-Version).PSVersion.Major;
+            if ($majV -ge 6) {
+                $iniObj = ( $json | ConvertFrom-Json -AsHashtable);
+            }
+            else
+            {
+                $iniObj = ($json | ConvertFrom-Json | ConvertJsonToHash );
+            }
         }
         return $iniObj;
     }
-    # TODO [Void] saveToFile([string]$filename, [bool]$isOverwrite){
+
     [Void]
     saveToFile([string]$filename, [bool]$isOverwrite)
     {
-
+        if ($filename -and ($filename.ToUpper() -ne '_empty_'.ToUpper() -and $isOverwrite) )
+        {
+            # имя файла верное
+            $this.CFG | ConvertTo-JSON -Depth 100 | Set-Content -Path $filename;
+        }
     }
 }
