@@ -1,7 +1,7 @@
 $ps = Split-Path $psCommandPath -Parent
 $ps
 #. "..\classes\classCFG.ps1"
-. "D:\tools\PSModules\avvClasses\classes\classCFG.ps1"
+#. "D:\tools\PSModules\avvClasses\classes\classCFG.ps1"
 
 $abc="qwerty"
 $fc="$($ps)\test.ps1.cfg"
