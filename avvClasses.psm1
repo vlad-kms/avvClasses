@@ -79,6 +79,78 @@ function Get-AvvClass {
     }
 }
 
+function ConvertJSONToHash{
+    param(
+        [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true)]
+        [AllowNull()]
+        $root
+    )
+    $hash = @{};
+    $keys = $root | Get-Member -MemberType NoteProperty | Select-Object -exp Name;
+    $keys | %{
+        #$key=$_;
+        $obj=$root.$($_);
+        if($obj -is [PSCustomObject])
+        {
+            $nesthash=ConvertJSONToHash $obj;
+            $hash.add($_,$nesthash);
+        }
+        else
+        {
+            $hash.add($_,$obj);
+        }
+    }
+    return $hash
+}
+
+function ConvertFrom-JsonToHashtable {
+    <#
+    .SYNOPSIS
+        Helper function to take a JSON string and turn it into a hashtable
+    .DESCRIPTION
+        The built in ConvertFrom-Json file produces as PSCustomObject that has case-insensitive keys. This means that
+        if the JSON string has different keys but of the same name, e.g. 'size' and 'Size' the comversion will fail.
+        Additionally to turn a PSCustomObject into a hashtable requires another function to perform the operation.
+        This function does all the work in step using the JavaScriptSerializer .NET class
+    #>
+
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true)]
+        [AllowNull()]
+        [string]
+        $InputObject,
+        [switch]
+    # Switch to denote that the returning object should be case sensitive
+        $casesensitive
+    )
+
+    # Perform a test to determine if the inputobject is null, if it is then return an empty hash table
+    if ([String]::IsNullOrEmpty($InputObject)) {
+        $dict = @{}
+    } else {
+        # load the required dll
+        #[void][System.Reflection.Assembly]::LoadWithPartialName("System.Web.Extensions")
+        #$deserializer = New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer
+        #$deserializer.MaxJsonLength = [int]::MaxValue
+        #$dict = $deserializer.DeserializeObject($InputObject)
+        [void][System.Reflection.Assembly]::LoadWithPartialName("System.Web.Script.Serialization");
+        #$deserializer = New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer;
+        $deserializer = [System.Web.Script.Serialization.JavaScriptSerializer]::new();
+        $deserializer.MaxJsonLength = [int]::MaxValue;
+        $dict = $deserializer.Deserialize($InputObject, 'Hashtable');
+
+        # If the caseinsensitve is false then make the dictionary case insensitive
+        if ($casesensitive -eq $false) {
+            $dict = New-Object "System.Collections.Generic.Dictionary[System.String, System.Object]"($dict, [StringComparer]::OrdinalIgnoreCase)
+        }
+    }
+    return $dict
+}
+
+function Get-Version{
+    return $PSVersionTable;
+}
 ###########################################################
 ###########################################################
 ###########################################################
@@ -102,7 +174,9 @@ function Get-ImportClass
     return $loadedModules
 }
 
-$DS='\'
+$DS='\';
+$global:avvVerMajor=$PSVersionTable.PSVersion.Major;
+
 $filenameIgnoreClass='.avvclassignore'
 # попробовать взять каталог расположения модулей с классами в переменной среды AVVPATHCLASSES
 $pathModules=$Env:AVVPATHCLASSES
