@@ -402,6 +402,14 @@ Class FileCFG {
         #return ($value -is [Hashtable]) -or ($value -is [System.Collections.Specialized.OrderedDictionary]);
         return ($value -is [System.Collections.IDictionary]);
     }
+
+    ################## toJson ###########################
+    [String] toString(){
+        return $this.ToJson();
+    }
+    [String] toJson() {
+        return ($this | ConvertTo-Json -Depth 100);
+    }
 }
 
 ###################################################################################################################
