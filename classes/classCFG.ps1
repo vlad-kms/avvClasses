@@ -82,11 +82,11 @@
 Правила именования Java
 #######################################>
 Class FileCFG {
-    [string]$filename=''
-    #[Hashtable]$CFG
-    [Hashtable]$CFG=[ordered]@{}
-	[bool]$errorAsException = $false
-    [bool] hidden $isReadOnly=$true
+    [string]$filename           ='';
+    [Hashtable]$CFG             =[ordered]@{};
+	[bool]$errorAsException     =$false;
+    [bool] hidden $isReadOnly   =$true;
+    [bool] hidden $isOverwrite  =$false;
 
     <#################################################
     #   Constructors
@@ -179,7 +179,7 @@ Class FileCFG {
         if ($value) {return $msg} else {return ""}
     }
 
-	<########################################################################
+	<######################### readSection ############################################
     #   Считать секцию
     #   Возврат:
     #       [Hashtable]@{
@@ -259,48 +259,8 @@ Class FileCFG {
         }
 		return $result;
 	}
-    
-    <###############################################################################
-        Считать значение ключа, учитывая секцию default
-        Вход:
-            [string]$Path - имя секции
-            [string]$Key  - имя ключа
-        Возврат:
-            [string] Значение ключа.
-                     Если секция $Path отсутсвует, то ""
-                     Если ключ есть в требуемой секции, то возвращается значение этого ключа.
-                     Если ключа нет в требуемой секции, то возврат ключа из секции [default]
-                     Если ключа нет ни в требуемой секции, ни в секции [default], то возврат ""
-                     Если значение ключа = _empty_, то вернет пустую строку ''
-    ###############################################################################>
-    [Object]hidden getKeyValue([string]$path, [string]$key){
-        $result=''
-        $res = $this.readSection($path);
-        if ($res.code -ne 0 ) {
-            return $result
-        }
-        $section = $res.result;
-        if ($section.Contains($key) -and $section[$key]) {
-            $result=$section[$key]
-        } else {
-            try{
-                $result=$this.CFG.default[$key]
-            }
-            catch {
-                $result=""
-            }
-        }
-        !$this.isExcept($result.Length -eq 0, "Not found key $($key) in section name $($path)");
-        try{
-            if ($result.ToUpper() -eq '_empty_'.ToUpper()) { $result='' }
-        }
-        catch {
-            $result=''
-        };
-        return $result;
-    }
 
-    ##########################################################
+    ########################## setKeyValue ################################
     # Записать значение ключа по пути.
     # Если ключ = '', то метод проверяет есть ли путь, и создает его если его нет.
     # и возвращает True,
@@ -372,6 +332,45 @@ Class FileCFG {
         return $result;
     }
 
+    <################################## getKeyValue ##########################################
+        Считать значение ключа, учитывая секцию default
+        Вход:
+            [string]$Path - имя секции
+            [string]$Key  - имя ключа
+        Возврат:
+            [string] Значение ключа.
+                     Если секция $Path отсутсвует, то ""
+                     Если ключ есть в требуемой секции, то возвращается значение этого ключа.
+                     Если ключа нет в требуемой секции, то возврат ключа из секции [default]
+                     Если ключа нет ни в требуемой секции, ни в секции [default], то возврат ""
+                     Если значение ключа = _empty_, то вернет пустую строку ''
+    ###############################################################################>
+    [Object]hidden getKeyValue([string]$path, [string]$key){
+        $result=''
+        $res = $this.readSection($path);
+        if ($res.code -ne 0 ) {
+            return $result
+        }
+        $section = $res.result;
+        if ($section.Contains($key) -and $section[$key]) {
+            $result=$section[$key]
+        } else {
+            try{
+                $result=$this.CFG.default[$key]
+            }
+            catch {
+                $result=""
+            }
+        }
+        !$this.isExcept($result.Length -eq 0, "Not found key $($key) in section name $($path)");
+        try{
+            if ($result.ToUpper() -eq '_empty_'.ToUpper()) { $result='' }
+        }
+        catch {
+            $result=''
+        };
+        return $result;
+    }
     [bool] getBool([string]$path, [string]$key){
         return [bool]$this.getKeyValue($path, $key)
     }
@@ -385,25 +384,30 @@ Class FileCFG {
         return [long]$this.getKeyValue($path, $key)
     }
 
+    ################## saveToFile ###########################
     [Void] saveToFile(){
-        $this.saveToFile($this.filename, $false);
+        $this.saveToFile($this.filename, $this.isOverwrite);
     }
     [Void] saveToFile([bool]$isOverwrite){
         $this.saveToFile($this.filename, $isOverwrite);
     }
+    [Void] saveToFile([string]$filename){
+        $this.saveToFile($filename, $this.isOverwrite);
+    }
     [Void] saveToFile([string]$filename, [bool]$isOverwrite){
     }
 
+    ################## isHashtable ###########################
     [bool] isHashtable($value){
         #return ($value -is [Hashtable]) -or ($value -is [System.Collections.Specialized.OrderedDictionary]);
         return ($value -is [System.Collections.IDictionary]);
     }
 }
 
-######################################
+###################################################################################################################
 #    [IniCFG]
 #    Объект для работы с файлом форматов ini
-#######################################
+###################################################################################################################
 Class IniCFG : FileCFG {
     IniCFG() : base() {
     }
@@ -502,11 +506,17 @@ Class IniCFG : FileCFG {
         }
         # проверить что каталога с таким именем нет.
         if (Test-Path $filename -PathType Container){
-            throw "Невозможно записать в файл, так как он является каталогом";
+            $msg = $this.isExcept($true, "Невозможно записать в файл, так как он является каталогом");
+            Write-Host $msg;
+            return;
+            #throw "Невозможно записать в файл, так как он является каталогом";
         }
         # проверить что файл с таким именем есть и перезапись запрешена.
         if ( (Test-Path $filename -PathType Leaf) -and !$isOverwrite){
-            throw "Невозможно записать в файл, так как перезапись запрещена";
+            $msg = $this.isExcept($true, "Файл существует, а перезапись запрещена");
+            Write-Host $msg;
+            return;
+            #throw "Невозможно записать в файл, так как перезапись запрещена";
         }
         $sections=$this.readSection('.');
         #$sections=$this.readSection('.'); # аналогичный результат
@@ -537,8 +547,12 @@ Class IniCFG : FileCFG {
             }
         } ### если были секции в hashtable
     }
-} ### class 4
+}
 
+###################################################################################################################
+#    [JsonCFG]
+#    Объект для работы с файлом форматов json
+###################################################################################################################
 class JsonCFG : FileCFG
 {
     JsonCFG(): base()
@@ -587,10 +601,26 @@ class JsonCFG : FileCFG
     [Void]
     saveToFile([string]$filename, [bool]$isOverwrite)
     {
-        if ($filename -and ($filename.ToUpper() -ne '_empty_'.ToUpper() -and $isOverwrite) )
+        # если $this.filename = '_empty_' или пустой строке, то выход
+        if (!$filename -or ($filename.ToUpper() -eq '_empty_'.ToUpper() ))
         {
-            # имя файла верное
-            $this.CFG | ConvertTo-JSON -Depth 100 | Set-Content -Path $filename;
+            return;
         }
+        # проверить что каталога с таким именем нет.
+        if (Test-Path $filename -PathType Container){
+            $msg = $this.isExcept($true, "Невозможно записать в файл, так как он является каталогом");
+            Write-Host $msg;
+            return;
+            #throw "Невозможно записать в файл, так как он является каталогом";
+        }
+        # проверить что файл с таким именем есть и перезапись запрешена.
+        if ( (Test-Path $filename -PathType Leaf) -and !$isOverwrite){
+            $msg = $this.isExcept($true, "Файл существует, а перезапись запрещена");
+            Write-Host $msg;
+            return;
+            #throw "Невозможно записать в файл, так как перезапись запрещена";
+        }
+        # имя файла верное
+        $this.CFG | ConvertTo-JSON -Depth 100 | Set-Content -Path $filename;
     }
 }
