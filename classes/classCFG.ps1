@@ -183,7 +183,11 @@ Class FileCFG {
         if ( $EasE -and $value ) {
             throw($msg)
         }
-        if ($value) {return $msg} else {return ""}
+        if ($value)
+        {
+            $msg | Out-Host;
+            return $msg
+        } else {return ""}
     }
 
 	<######################### readSection ############################################
@@ -304,12 +308,12 @@ Class FileCFG {
             elseif ( $currentPath.Contains($_) -and !$this.isHashtable($currentPath["$_"]) )
             {
                 $res = $False;
-                ($this.isExcept(!$result, "Невозможно создать секцию по данному пути $($path). Уже есть ключ с таким именем.")) | Out-Host;
+                $this.isExcept(!$result, "Невозможно создать секцию по данному пути $($path). Уже есть ключ с таким именем.");
             }
             else
             {
                 $res = $False;
-                ($this.isExcept(!$result, "неопределенная ошибка при создании секции по данному пути $($path).")) | Out-Host;
+                $this.isExcept(!$result, "неопределенная ошибка при создании секции по данному пути $($path).");
             }
         })
         # $result= $True, если путь подходит для создания новой секции,
@@ -335,7 +339,7 @@ Class FileCFG {
             else #if ( $currentPath.Contains($section) -and !$this.isHashtable($currentPath["$section"]) )
             {
                 $result = $null;
-                ($this.isExcept(($result -eq $null), "Невозможно создать секцию по данному пути $($path). Уже есть ключ с таким именем.")) | Out-Host;
+                $this.isExcept(($result -eq $null), "Невозможно создать секцию по данному пути $($path). Уже есть ключ с таким именем.");
             }
         }
         return $result;
@@ -372,14 +376,13 @@ Class FileCFG {
                 elseif ($r.code -eq 2)
                 {
                     # путь есть, но это не секция, а значение
-                    $this.isExcept($true,
-                            'Нельзя записать $($key) по пути $($path), т.к. путь не является секцией') | Out-Host;
+                    $this.isExcept($true,'Нельзя записать $($key) по пути $($path), т.к. путь не является секцией');
                     $result = $false;
                 }
                 else
                 {
                     # неизвестная ошибка
-                    $this.isExcept($true, 'Неопределенная ошибка при запсис $($key) по пути $($path)') | Out-Host;
+                    $this.isExcept($true, 'Неопределенная ошибка при запсис $($key) по пути $($path)');
                     $result = $false;
                 }
             }
@@ -413,11 +416,15 @@ Class FileCFG {
     ###############################################################################>
     [Object]hidden getKeyValue([string]$path, [string]$key){
         $result=''
+        <#
         $res = $this.readSection($path);
         if ($res.code -ne 0 ) {
             return $result
         }
         $section = $res.result;
+        #>
+        $section = $this.getSection($path, '');
+        if ($section -eq $null) { return $result; }
         if ($section.Contains($key) -and $section[$key]) {
             $result=$section[$key]
         } else {
@@ -428,9 +435,9 @@ Class FileCFG {
                 $result=""
             }
         }
-        !$this.isExcept($result.Length -eq 0, "Not found key $($key) in section name $($path)");
+        $this.isExcept($result.Length -eq 0, "Not found key $($key) in section name $($path)");
         try{
-            if ($result.ToUpper() -eq '_empty_'.ToUpper()) { $result='' }
+            if ( ($result.gettype() -eq ''.gettype()) -and ($result.ToUpper() -eq '_empty_'.ToUpper()) ) { $result='' }
         }
         catch {
             $result=''
