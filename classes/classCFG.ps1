@@ -321,12 +321,15 @@ Class FileCFG {
                         $s += "['$( $_ )']";
                         #Invoke-Expression -Command ('$c'+".CFG$s['key1']='value'")
                     });
+                    <#
                     if ($s)
-                    {
+                    { # если не корневой уровень
                         Invoke-Expression -Command ('$this.CFG' + "$s['$( $key )']="+'$value');
                         $result = $true;
                     }
-                    #$this.CFG
+                    #>
+                    Invoke-Expression -Command ('$this.CFG' + "$s['$( $key )']="+'$value');
+                    $result = $true;
                 }
             }
             catch
@@ -542,7 +545,8 @@ Class IniCFG : FileCFG {
             $data2file=@();
             $sections=$sections.result;
             foreach ($key in $sections.Keys){
-                # здесь только если в секции есть ключи
+                # цикл по всем ключам
+                # значение текущего ключа
                 $cSect = $sections[$key];
                 if ($this.isHashtable($cSect))
                 #if (
@@ -550,11 +554,17 @@ Class IniCFG : FileCFG {
                 #        ($cSect -is [System.Collections.Specialized.OrderedDictionary])
                 #    )
                 {
+                    # если тип значения текущего ключа есть Hashtable
                     $data2file += "[$($Key)]";
                     $cSect.GetEnumerator() | ForEach-Object { #"{0}={1}" -f $_.key, $_.value }
                         $data2file += "$($_.key)=$($_.value)";
 
                     }
+                }
+                else {
+                    # если тип значения текущего ключа не Hashtable,
+                    # т.е. просто ключ=значение
+                    $data2file += "$($key)=$($cSect)";
                 }
             }
             # записать в файл, если в массиве есть данные
