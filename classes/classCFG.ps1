@@ -92,8 +92,8 @@ Class FileCFG {
     [string]$filename           ='';
     [Hashtable]$CFG             =[ordered]@{};
 	[bool]$errorAsException     =$false;
-    [bool] hidden $isReadOnly   =$true;
-    [bool] hidden $isOverwrite  =$false;
+    [bool] <#hidden#> $isReadOnly   =$true;
+    [bool] <#hidden#> $isOverwrite  =$false;
 
     <#################################################
     #   Constructors
@@ -183,7 +183,11 @@ Class FileCFG {
         if ( $EasE -and $value ) {
             throw($msg)
         }
-        if ($value) {return $msg} else {return ""}
+        if ($value)
+        {
+            $msg | Out-Host;
+            return $msg
+        } else {return ""}
     }
 
 	<######################### readSection ############################################
@@ -218,6 +222,7 @@ Class FileCFG {
         #                   }
         #           }
         # }
+        $currentPath = $null;
         $arrSections.ForEach({
             #if ( $path.Contains($_) -and $this.isHashtable($path[$_]) )
             if ( $path.Contains($_) )
@@ -248,24 +253,97 @@ Class FileCFG {
         #if (!($path -is [Hashtable]) -and
         #        !($path -is [System.Collections.Specialized.OrderedDictionary])
         #    )
-        if (!($this.isHashtable($path)) )
+        if ( !$this.isHashtable($path) )
         {
             # последний элемент в пути не является [Hashtable]
-            $path = @{};
+            $path = $null;
             $code = 2;
         }
-        $res = @{};
-        $path.Keys.foreach({
-            $res.Add("$_", $path[$_]);
-        });
+        if ( $code -ne 0 ) { $path = $null; }
         # Если в секции нет значений и $this.ErrorAsException и $code <> 0, то породить Exception
-        !$this.isExcept( ($res.Keys.Count -eq 0) -and ($code -ne 0), "Not found section name $($section) or is not Section type");
+        !$this.isExcept( ($path.Keys.Count -eq 0) -and ($code -ne 0), "Not found section name $($section) or is not Section type");
         $result = @{
             'code'=$code;
-            'result'=$res
+            'result'=$path;
         }
 		return $result;
 	}
+    [hashtable] getSection([String]$path, $section)
+    {
+        if ($section) { $path += ".$($section)"}
+        $res = $this.readSection($path);
+        if ($res.code -eq 0) { return $res.result; }
+        else { return $null; }
+    }
+
+
+    [hashtable] addSection([string]$path, [string]$section){
+        $result = $null;
+        if ($this.isReadOnly) { return $result; }
+        $res = $true;
+        # проверить каждый элемент в path и
+        # если он есть и не hashtable
+        #   то прервать с ошибкой
+        # если он есть и hashtable
+        #   то перейти к следующему элементу
+        # если его нет
+        #   то создать и перейти к следующему, если при создании не было ошибок
+        $arrPath = $path.Split('.', [StringSplitOptions]::RemoveEmptyEntries);
+        $currentPath = $this.CFG;
+        $arrPath.foreach({
+            if ( $currentPath.Contains($_) -and $this.isHashtable($currentPath["$_"]) )
+            {
+                # взять следующий элемент пути
+                $currentPath = $currentPath["$_"];
+                $res = $true;
+            }
+            elseif (!$currentPath.Contains($_))
+            {
+                # создать новый ключ типа hashtable
+                $currentPath.add($_, @{});
+                # взять следующий элемент пути
+                $currentPath = $currentPath["$_"];
+                $res = $true;
+            }
+            elseif ( $currentPath.Contains($_) -and !$this.isHashtable($currentPath["$_"]) )
+            {
+                $res = $False;
+                $this.isExcept(!$result, "Невозможно создать секцию по данному пути $($path). Уже есть ключ с таким именем.");
+            }
+            else
+            {
+                $res = $False;
+                $this.isExcept(!$result, "неопределенная ошибка при создании секции по данному пути $($path).");
+            }
+        })
+        # $result= $True, если путь подходит для создания новой секции,
+        if ($res)
+        {
+            # проверить нет ли ключа в данной секции с таким именем $section
+            # если нет, то создать новую секцию $section,
+            # иначе Exception
+            if (!$section)
+            {
+                $result = $currentPath;
+            }
+            elseif ( !$currentPath.Contains($section))
+            {
+                #создать секцию
+                $currentPath.add($section, @{});
+                $result = $currentPath["$section"];
+            }
+            elseif ($currentPath.Contains($section) -and $this.isHashtable($currentPath["$section"]))
+            {
+                $result = $currentPath["$section"];
+            }
+            else #if ( $currentPath.Contains($section) -and !$this.isHashtable($currentPath["$section"]) )
+            {
+                $result = $null;
+                $this.isExcept(($result -eq $null), "Невозможно создать секцию по данному пути $($path). Уже есть ключ с таким именем.");
+            }
+        }
+        return $result;
+    }
 
     ########################## setKeyValue ################################
     # Записать значение ключа по пути.
@@ -282,61 +360,42 @@ Class FileCFG {
     #   $true если запись удачно, иначе $false.
     #   Если key='': $true если путь есть или смогли создать, иначе $false
     ##########################################################
-    #[bool] hidden setKeyValue([string]$path, [string]$key, [Object]$value){
-    #    return $this.isReadOnly;
-    #}
-    [bool] hidden setKeyValue([string]$path, [string]$key, [Object]$value){
+    [bool]  setKeyValue([string]$path, [string]$key, [Object]$value){
         $result = $false;
+        $currentPath = $null;
         if (!$this.isReadOnly) {
-            # здесь только если свойство isReadOnly = $True
-            try
+            # здесь только если свойство isReadOnly != $True
+            $r = $this.readSection($path);
+            if ($r.code -ne 0)
             {
-                $r = $this.readSection($path);
-                if ($r.code -ne 0)
-                {
-                    if ($r.code -eq 1) {
-                        # секции нет, создать ее
-
-                        $result = $true;
-                    }
-                    elseif ($r.code -eq 2)
-                    {
-                        # путь есть, но это не секция, а значение
-                        throw [System.AccessViolationException]::New('Нельзя записать $($key) по пути $($path), `
-                            т.к. путь не является секцией');
-                    }
-                    else
-                    {
-                        # неизвестная ошибка
-                        throw [System.Exception]::New('Неопределенная ошибка при запсис $($key) по пути $($path)');
-                    }
-                }
-                # записать значение, если присутствует key и он не равен ''
-                if ($key)
-                {
-                    # массив из строки 'sec1.sec2.sec3...
-                    $arrSections = $path.Split('.', [StringSplitOptions]::RemoveEmptyEntries);
-                    $s = '';
-                    $arrSections.foreach({
-                        $s += "['$( $_ )']";
-                        #Invoke-Expression -Command ('$c'+".CFG$s['key1']='value'")
-                    });
-                    <#
-                    if ($s)
-                    { # если не корневой уровень
-                        Invoke-Expression -Command ('$this.CFG' + "$s['$( $key )']="+'$value');
-                        $result = $true;
-                    }
-                    #>
-                    Invoke-Expression -Command ('$this.CFG' + "$s['$( $key )']="+'$value');
+                if ($r.code -eq 1) {
+                    # секции нет, создать ее
+                    $currentPath = $this.addSection($Path, '');
                     $result = $true;
                 }
+                elseif ($r.code -eq 2)
+                {
+                    # путь есть, но это не секция, а значение
+                    $this.isExcept($true,'Нельзя записать $($key) по пути $($path), т.к. путь не является секцией');
+                    $result = $false;
+                }
+                else
+                {
+                    # неизвестная ошибка
+                    $this.isExcept($true, 'Неопределенная ошибка при запсис $($key) по пути $($path)');
+                    $result = $false;
+                }
             }
-            catch
+            else
             {
-                #$this.isExcept($this.errorAsException, "Error write $( $value ) in $( $key ) section $( $path )");
-                $result = $false;
-                if ($this.errorAsException) {throw $PSItem;};
+                $currentPath = $r.result;
+                $result = $true;
+            }
+            # записать значение, если присутствует key и он не равен ''
+            if ($key -and $result)
+            {
+                $currentPath["$key"] = $value
+                $result = $true;
             }
         }
         return $result;
@@ -357,11 +416,15 @@ Class FileCFG {
     ###############################################################################>
     [Object]hidden getKeyValue([string]$path, [string]$key){
         $result=''
+        <#
         $res = $this.readSection($path);
         if ($res.code -ne 0 ) {
             return $result
         }
         $section = $res.result;
+        #>
+        $section = $this.getSection($path, '');
+        if ($section -eq $null) { return $result; }
         if ($section.Contains($key) -and $section[$key]) {
             $result=$section[$key]
         } else {
@@ -372,9 +435,9 @@ Class FileCFG {
                 $result=""
             }
         }
-        !$this.isExcept($result.Length -eq 0, "Not found key $($key) in section name $($path)");
+        $this.isExcept($result.Length -eq 0, "Not found key $($key) in section name $($path)");
         try{
-            if ($result.ToUpper() -eq '_empty_'.ToUpper()) { $result='' }
+            if ( ($result.gettype() -eq ''.gettype()) -and ($result.ToUpper() -eq '_empty_'.ToUpper()) ) { $result='' }
         }
         catch {
             $result=''
