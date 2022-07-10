@@ -321,12 +321,15 @@ Class FileCFG {
                         $s += "['$( $_ )']";
                         #Invoke-Expression -Command ('$c'+".CFG$s['key1']='value'")
                     });
+                    <#
                     if ($s)
-                    {
+                    { # если не корневой уровень
                         Invoke-Expression -Command ('$this.CFG' + "$s['$( $key )']="+'$value');
                         $result = $true;
                     }
-                    #$this.CFG
+                    #>
+                    Invoke-Expression -Command ('$this.CFG' + "$s['$( $key )']="+'$value');
+                    $result = $true;
                 }
             }
             catch
@@ -537,12 +540,16 @@ Class IniCFG : FileCFG {
         $sections=$this.readSection('.');
         #$sections=$this.readSection('.'); # аналогичный результат
         # проверить что смогли считать корневую секцию CFG
+        $nameRootSection = '__root__';
         if ($sections.code -eq 0) {
             # считали секцию CFG
-            $data2file=@();
+            $data2file=@{
+                "$nameRootSection"=@()
+            };
             $sections=$sections.result;
             foreach ($key in $sections.Keys){
-                # здесь только если в секции есть ключи
+                # цикл по всем ключам
+                # значение текущего ключа
                 $cSect = $sections[$key];
                 if ($this.isHashtable($cSect))
                 #if (
@@ -550,17 +557,45 @@ Class IniCFG : FileCFG {
                 #        ($cSect -is [System.Collections.Specialized.OrderedDictionary])
                 #    )
                 {
-                    $data2file += "[$($Key)]";
+                    # если тип значения текущего ключа есть Hashtable
+                    #$data2file[$key] += "[$($Key)]";
+                    $data2file[$key] = @()
                     $cSect.GetEnumerator() | ForEach-Object { #"{0}={1}" -f $_.key, $_.value }
-                        $data2file += "$($_.key)=$($_.value)";
-
+                        $data2file[$key] += "$($_.key)=$($_.value)";
                     }
+                }
+                else {
+                    # если тип значения текущего ключа не Hashtable,
+                    # т.е. просто ключ=значение
+                    $data2file.$nameRootSection += "$($key)=$($cSect)";
                 }
             }
             # записать в файл, если в массиве есть данные
+            <#
             if ($data2file.Count -gt 0) {
                 $data2file | Out-File -FilePath $filename -Force -Encoding default;
             }
+            #>
+            # записать в файл
+            $df = @();
+            $data2file.$nameRootSection.foreach({
+                $df += $_;
+            })
+            #if ($df.count -ne 0) { $df += ''; }
+            foreach ( $key in $data2file.Keys) {
+                #Write-Host $key;
+            #
+                if ($key -ne $nameRootSection) {
+                    $df += '';
+                    $df += "[$($key)]";
+                    $data2file["$key"].foreach({
+                        $df += $_;
+                    })
+                }
+                ###$df += $_;
+            #
+            }
+            $df | Out-File -FilePath $filename -Force -Encoding default;
         } ### если были секции в hashtable
     }
 }
