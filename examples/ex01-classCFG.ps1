@@ -13,13 +13,16 @@ Get-Content -Path $fc
 
 echo "0. Демонстрация конструкторов"
 
-$p=[ordered]@{'_obj_'=@{'isReadOnly'=$False;'isOverwrite'=$True; 'isDebug'=$True;'filename'='d:\1.json'}; };$c=(Get-AvvClass -ClassName jsoncFG -Params $p);$c
-echo '$p=[ordered]@{'+'_obj_'+'=@{'+'isReadOnly'+'=$False;'+'isOverwrite'+'=$True; '+'isDebug'+'=$True;'+'filename'+'='+'d:\1.json'+'}; };$c=(Get-AvvClass -ClassName jsoncFG -Params $p);$c'
+$p=[ordered]@{'_obj_'=@{'isReadOnly'=$False;'isOverwrite'=$True; 'isDebug'=$True;'filename'='d:\1.json'}; };$c=(Get-AvvClass -ClassName jsoncFG -Params $p);
+echo '$p=[ordered]@{''_obj_''=@{''isReadOnly''=$False;''isOverwrite''=$True; ''isDebug''=$True;''filename''=''d:\1.json''}; };$c=(Get-AvvClass -ClassName jsoncFG -Params $p);$c'
 $c.toJson();
 
-$p=[ordered]@{'_obj_'=@{'isReadOnly'=$False;'isOverwrite'=$True; 'isDebug'=$True;'filename'='d:\1.json'};'_cfg_'=@{} };$c=(Get-AvvClass -ClassName jsoncFG -Params $p);$c
+$p=[ordered]@{'_obj_'=@{'isReadOnly'=$False;'isOverwrite'=$True; 'isDebug'=$True;'filename'='d:\1.json'};'_cfg_'=@{} };$c=(Get-AvvClass -ClassName jsoncFG -Params $p);
+echo '$p=[ordered]@{''_obj_''=@{''isReadOnly''=$False;''isOverwrite''=$True; ''isDebug''=$True;''filename''=''d:\1.json''};''_cfg_''=@{} };$c=(Get-AvvClass -ClassName jsoncFG -Params $p);$c'
 $c.toJson();
-$p=[ordered]@{'_obj_'=@{'isReadOnly'=$False;'isOverwrite'=$True; 'isDebug'=$True;'filename'='d:\1.json'};'_cfg_'=@{'k1'='v1';'k2'=@{'k1'=1;'k2'=2}} };$c=(Get-AvvClass -ClassName jsoncFG -Params $p);$c
+
+$p=[ordered]@{'_obj_'=@{'isReadOnly'=$False;'isOverwrite'=$True; 'isDebug'=$True;'filename'='d:\1.json'};'_cfg_'=@{'k1'='v1';'k2'=@{'k1'=1;'k2'=2}} };$c=(Get-AvvClass -ClassName jsoncFG -Params $p);
+echo '$p=[ordered]@{''_obj_''=@{''isReadOnly''=$False;''isOverwrite''=$True; ''isDebug''=$True;''filename''=''d:\1.json''};''_cfg_''=@{''k1''=''v1'';''k2''=@{''k1''=1;''k2''=2}} };$c=(Get-AvvClass -ClassName jsoncFG -Params $p);$c'
 $c.toJson();
 
 echo "1. Демонстрация использования переменных скрипта в файле CFG"
