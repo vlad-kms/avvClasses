@@ -253,7 +253,6 @@ Class FileCFG {
         #                   }
         #           }
         # }
-        $currentPath = $null;
         $arrSections.ForEach({
             #if ( $path.Contains($_) -and $this.isHashtable($path[$_]) )
             if ( $path.Contains($_) )
