@@ -3,10 +3,7 @@ $ps
 #. "..\classes\classCFG.ps1"
 #. "D:\tools\PSModules\avvClasses\classes\classCFG.ps1"
 
-$abc="qwerty"
-$fc="$($ps)\test.ps1.cfg"
-$c1=[IniCFG]::new($fc)
-$c1
+$global:abc="qwerty"
 
 echo "Данные из файла $($fc):"
 Get-Content -Path $fc
@@ -24,6 +21,13 @@ $c.toJson();
 $p=[ordered]@{'_obj_'=@{'isReadOnly'=$False;'isOverwrite'=$True; 'isDebug'=$True;'filename'='d:\1.json'};'_cfg_'=@{'k1'='v1';'k2'=@{'k1'=1;'k2'=2}} };$c=(Get-AvvClass -ClassName jsoncFG -Params $p);
 echo '$p=[ordered]@{''_obj_''=@{''isReadOnly''=$False;''isOverwrite''=$True; ''isDebug''=$True;''filename''=''d:\1.json''};''_cfg_''=@{''k1''=''v1'';''k2''=@{''k1''=1;''k2''=2}} };$c=(Get-AvvClass -ClassName jsoncFG -Params $p);$c'
 $c.toJson();
+
+$fc="$($ps)\test.ps1.cfg";
+Get-Content $fc|Out-Host;
+echo '$c1=[IniCFG]::new($fc)'
+. "..\classes\classCFG.ps1"
+$c1=[IniCFG]::new($fc);
+$c1.toJson();
 
 echo "1. Демонстрация использования переменных скрипта в файле CFG"
 
