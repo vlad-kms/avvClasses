@@ -89,11 +89,12 @@
 Правила именования Java
 #######################################>
 Class FileCFG {
-    [string]$filename           ='';
-    [Hashtable]$CFG             =[ordered]@{};
-	[bool]$errorAsException     =$false;
-    [bool] <#hidden#> $isReadOnly   =$true;
-    [bool] <#hidden#> $isOverwrite  =$false;
+    [string] $filename      ='';
+    [Hashtable] $CFG        =[ordered]@{};
+	[bool] $errorAsException=$false;
+    [bool] $isReadOnly      =$true;
+    [bool] $isOverwrite     =$false;
+    [bool] $isDebug         =$false;
 
     <#################################################
     #   Constructors
@@ -125,11 +126,33 @@ Class FileCFG {
         $this.CFG += $CFG;
     }
     FileCFG([Hashtable]$CFG) {
-        $this.CFG += $CFG;
-    }
-    FileCFG([Hashtable]$CFG, [bool]$EaE) {
-        $this.CFG += $CFG;
-        $this.errorAsException = $EaE
+        # входящий hashtable:
+        #   @{
+        #       '_obj_'=@{} - значения для свойств объекта
+        #       '_cfg_'=@{} - значение для поля CFG
+        #   }h
+        $keyObj = '_obj_';
+        $keyCfg = '_cfg_';
+        $isFilename = $False;
+        $isCFG = $CFG.Contains($keyCfg) -and ($CFG.$keyCfg -ne $null) -and ($CFG.$keyCfg -is [Hashtable]);
+        if ($CFG.Contains($keyObj))
+        {
+            foreach ($key in ($this | Get-Member -Force -MemberType Properties | Select-Object -ExpandProperty Name) ){
+                if ($CFG.$keyObj.Contains($key)) {
+                    if ($key.ToUpper() -eq 'filename'.ToUpper())
+                    {
+                        $isFilename = $True;
+                    }
+                    $this.$key = $CFG.$keyObj.$key;
+                }
+            }
+            if ( !$isFilename -or !$CFG.$keyObj.filename )
+            {
+                $this.filename = '_empty_';
+            }
+            if ( !$isCFG ) { $this.initFileCFG(); }
+        }
+        if ( $isCFG ) { $this.CFG = $CFG.$keyCfg; }
     }
 
     [String] getExtensionForClass()
@@ -185,9 +208,9 @@ Class FileCFG {
         }
         if ($value)
         {
-            $msg | Out-Host;
-            return $msg
-        } else {return ""}
+            if ($this.isDebug) { $msg | Out-Host; }
+            return $msg;
+        } else { return ""; }
     }
 
 	<######################### readSection ############################################
@@ -485,10 +508,10 @@ Class FileCFG {
     }
 }
 
-###################################################################################################################
+### +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #    [IniCFG]
 #    Объект для работы с файлом форматов ini
-###################################################################################################################
+### +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Class IniCFG : FileCFG {
     IniCFG() : base() {
     }
@@ -498,12 +521,16 @@ Class IniCFG : FileCFG {
     }
     IniCFG([string]$FN, [bool]$EaE) : base($FN, $EaE) {
     }
-    IniCFG([string]$FN, [bool]$EaE, [Hashtable]$CFG) {#} : base("_empty_", $EaE, $CFG) {
+    IniCFG([Hashtable]$CFG) : base($CFG) {
+    }
+    IniCFG([string]$FN, [bool]$EaE, [Hashtable]$CFG): base($FN, $EaE, $CFG) {
+        <#
         if ($this.isHashtable($CFG)) { $FN = '_empty_'; }
         $this.filename = $FN;
         $this.errorAsException = $EaE
         $this.initFileCFG();
         if ($this.isHashtable($CFG)) { $this.CFG += $CFG; }
+        #>
     }
 
     ###############################################################################
@@ -663,10 +690,10 @@ Class IniCFG : FileCFG {
     }
 }
 
-###################################################################################################################
+### +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #    [JsonCFG]
 #    Объект для работы с файлом форматов json
-###################################################################################################################
+### +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 class JsonCFG : FileCFG
 {
     JsonCFG(): base()
@@ -681,13 +708,17 @@ class JsonCFG : FileCFG
     JsonCFG([string]$FN, [bool]$EaE): base($FN, $EaE)
     {
     }
-    JsonCFG([string]$FN, [bool]$EaE, [Hashtable]$CFG)
+    JsonCFG([Hashtable]$CFG) : base($CFG) {
+    }
+    JsonCFG([string]$FN, [bool]$EaE, [Hashtable]$CFG) : base ($FN, $Eae, $CFG)
     {
+        <#
         if ($this.isHashtable($CFG)) { $FN = '_empty_'; }
         $this.filename = $FN;
         $this.errorAsException = $EaE
         $this.initFileCFG();
         if ($this.isHashtable($CFG)) { $this.CFG += $CFG; }
+        #>
     }
 
     [Hashtable]
