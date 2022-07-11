@@ -15,7 +15,9 @@
     ClinicVersion=2
     test=test
     test1=test1
-
+    [_always_]
+    param1=value1
+    param2=value2
     [dns_cli]
     Token=$($Token)
     access_token=$($ExtParams.Token)
@@ -46,6 +48,12 @@
     test                           test
     test1                          test1
 # Если имеется секция [default], то значение ключа формируется по правилам
+# Если в секции нет ключа, а в [default] есть, значение берется из [default].
+# Если в секции есть ключ, неважно есть или нет в [default], значение берется из секции,
+# кроме случая, если значение в секции = '_empty_', значение берется из [default].
+# Если имеется секция [_always_], то значение ключа формируется по правилам:
+# Применяются они после [default] и заменяют все что было до этого, т.е.
+# секция [_always_] переопределяет все остальные параметры.
 # Если в секции нет ключа, а в [default] есть, значение берется из [default].
 # Если в секции есть ключ, неважно есть или нет в [default], значение берется из секции,
 # кроме случая, если значение в секции = '_empty_', значение берется из [default].
@@ -456,6 +464,12 @@ Class FileCFG {
             }
             catch {
                 $result=""
+            }
+        }
+        # Обработка секции [_always_]
+        if ($this.CFG.Contains('_always_') -and $this.isHashtable($this.CFG['_always_'])) {
+            if ($this.CFG['_always_'].Contains($key)) {
+                $result = $this.CFG['_always_'][$key];
             }
         }
         $this.isExcept($result.Length -eq 0, "Not found key $($key) in section name $($path)");
