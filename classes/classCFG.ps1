@@ -103,7 +103,7 @@ Class FileCFG {
     [bool] $isReadOnly      =$true;
     [bool] $isOverwrite     =$false;
     [bool] $isDebug         =$false;
-
+    [String]hidden $currentSection ='.';
     <#################################################
     #   Constructors
     #################################################>
@@ -203,6 +203,7 @@ Class FileCFG {
     }
     
     [Hashtable]importInifile([string]$filename){
+        $this.currentSection = '.';
         return [ordered]@{}
     }
 
@@ -236,10 +237,32 @@ Class FileCFG {
     #       Если секция не существует, то в зависимости от errorAsException,
     #       либо пустой список, либо формируется Exception
     #########################################################################>
+    [String]
+    normalizeSection ([String]$section)
+    {
+        $result = $section.trim();
+        $isRoot = $false;
+        while (($result.Substring(0, 1) -eq '\') -or ($result.Substring(0, 1) -eq '/'))
+        {
+            $isRoot = $true;
+            $result = $result.Substring(1, $result.Length -1);
+        }
+        if (!$isRoot)
+        {
+            $result = $this.currentSection + '.' + $result;
+        }
+        while (($result.Substring(0, 1) -eq '\') -or ($result.Substring(0, 1) -eq '/'))
+        {
+            $result = $result.Substring(1, $result.Length -1);
+        }
+        return $result;
+    }
+
     [Hashtable]readSection([string]$section) {
 		$result = @{};
         $code = 0;
         # массив из строки 'sec1.sec2.sec3...
+        $section = $this.normalizeSection($section);
         $arrSections = $section.Split('.', [StringSplitOptions]::RemoveEmptyEntries);
         $path = $this.CFG;
         # проверить для каждого из массива, что существует ключ и его значение есть Hashtable:
@@ -305,7 +328,10 @@ Class FileCFG {
         if ($res.code -eq 0) { return $res.result; }
         else { return $null; }
     }
-
+    [hashtable] getSection([String]$path)
+    {
+        return $this.getSection($path, '');
+    }
 
     [hashtable] addSection([string]$path, [string]$section){
         $result = $null;
@@ -318,6 +344,7 @@ Class FileCFG {
         #   то перейти к следующему элементу
         # если его нет
         #   то создать и перейти к следующему, если при создании не было ошибок
+        $path = $this.normalizeSection($path);
         $arrPath = $path.Split('.', [StringSplitOptions]::RemoveEmptyEntries);
         $currentPath = $this.CFG;
         $arrPath.foreach({
@@ -374,6 +401,10 @@ Class FileCFG {
         }
         return $result;
     }
+    [hashtable] addSection([string]$path)
+    {
+        return $this.addSection([string]$path, '');
+    }
 
     ########################## setKeyValue ################################
     # Записать значение ключа по пути.
@@ -391,135 +422,136 @@ Class FileCFG {
     #   Если key='': $true если путь есть или смогли создать, иначе $false
     ##########################################################
     [bool]  setKeyValue([string]$path, [string]$key, [Object]$value){
-        $result = $false;
-        $currentPath = $null;
-        if (!$this.isReadOnly) {
-            # здесь только если свойство isReadOnly != $True
-            $r = $this.readSection($path);
-            if ($r.code -ne 0)
-            {
-                if ($r.code -eq 1) {
-                    # секции нет, создать ее
-                    $currentPath = $this.addSection($Path, '');
-                    $result = $true;
-                }
-                elseif ($r.code -eq 2)
-                {
-                    # путь есть, но это не секция, а значение
-                    $this.isExcept($true,'Нельзя записать $($key) по пути $($path), т.к. путь не является секцией');
-                    $result = $false;
-                }
-                else
-                {
-                    # неизвестная ошибка
-                    $this.isExcept($true, 'Неопределенная ошибка при запсис $($key) по пути $($path)');
-                    $result = $false;
-                }
-            }
-            else
-            {
-                $currentPath = $r.result;
-                $result = $true;
-            }
-            # записать значение, если присутствует key и он не равен ''
-            if ($key -and $result)
-            {
-                $currentPath["$key"] = $value
-                $result = $true;
-            }
-        }
-        return $result;
+    $result = $false;
+    $currentPath = $null;
+    if (!$this.isReadOnly) {
+    # здесь только если свойство isReadOnly != $True
+    $r = $this.readSection($path);
+    if ($r.code -ne 0)
+    {
+    if ($r.code -eq 1) {
+    # секции нет, создать ее
+    $currentPath = $this.addSection($Path, '');
+    $result = $true;
+    }
+    elseif ($r.code -eq 2)
+    {
+    # путь есть, но это не секция, а значение
+    $this.isExcept($true,'Нельзя записать $($key) по пути $($path), т.к. путь не является секцией');
+    $result = $false;
+    }
+    else
+    {
+    # неизвестная ошибка
+    $this.isExcept($true, 'Неопределенная ошибка при запсис $($key) по пути $($path)');
+    $result = $false;
+    }
+    }
+    else
+    {
+    $currentPath = $r.result;
+    $result = $true;
+    }
+    # записать значение, если присутствует key и он не равен ''
+    if ($key -and $result)
+    {
+    $currentPath["$key"] = $value
+    $result = $true;
+    }
+    }
+    return $result;
     }
 
     <################################## getKeyValue ##########################################
-        Считать значение ключа, учитывая секцию default
-        Вход:
-            [string]$Path - имя секции
-            [string]$Key  - имя ключа
-        Возврат:
-            [string] Значение ключа.
-                     Если секция $Path отсутсвует, то ""
-                     Если ключ есть в требуемой секции, то возвращается значение этого ключа.
-                     Если ключа нет в требуемой секции, то возврат ключа из секции [default]
-                     Если ключа нет ни в требуемой секции, ни в секции [default], то возврат ""
-                     Если значение ключа = _empty_, то вернет пустую строку ''
-    ###############################################################################>
+    Считать значение ключа, учитывая секцию default
+    Вход:
+        [string]$Path - имя секции
+        [string]$Key  - имя ключа
+    Возврат:
+        [string] Значение ключа.
+                 Если секция $Path отсутсвует, то ""
+                 Если ключ есть в требуемой секции, то возвращается значение этого ключа.
+                 Если ключа нет в требуемой секции, то возврат ключа из секции [default]
+                 Если ключа нет ни в требуемой секции, ни в секции [default], то возврат ""
+                 Если значение ключа = _empty_, то вернет пустую строку ''
+###############################################################################>
     [Object]hidden getKeyValue([string]$path, [string]$key){
-        $result=''
-        <#
-        $res = $this.readSection($path);
-        if ($res.code -ne 0 ) {
-            return $result
-        }
-        $section = $res.result;
-        #>
-        $section = $this.getSection($path, '');
-        if ($section -eq $null) { return $result; }
-        if ($section.Contains($key) -and $section[$key]) {
-            $result=$section[$key]
-        } else {
-            try{
-                $result=$this.CFG.default[$key]
-            }
-            catch {
-                $result=""
-            }
-        }
-        # Обработка секции [_always_]
-        if ($this.CFG.Contains('_always_') -and $this.isHashtable($this.CFG['_always_'])) {
-            if ($this.CFG['_always_'].Contains($key)) {
-                $result = $this.CFG['_always_'][$key];
-            }
-        }
-        $this.isExcept($result.Length -eq 0, "Not found key $($key) in section name $($path)");
-        try{
-            if ( ($result.gettype() -eq ''.gettype()) -and ($result.ToUpper() -eq '_empty_'.ToUpper()) ) { $result='' }
-        }
-        catch {
-            $result=''
-        };
-        return $result;
+    $result=''
+    <#
+    $res = $this.readSection($path);
+    if ($res.code -ne 0 ) {
+        return $result
+    }
+    $section = $res.result;
+    #>
+    $section = $this.getSection($path, '');
+    if ($section -eq $null) { return $result; }
+    if ($section.Contains($key) -and $section[$key]) {
+    $result=$section[$key]
+    } else {
+    try{
+    $result=$this.CFG.default[$key]
+    }
+    catch {
+    $result=""
+    }
+    }
+    # Обработка секции [_always_]
+    if ($this.CFG.Contains('_always_') -and $this.isHashtable($this.CFG['_always_'])) {
+    if ($this.CFG['_always_'].Contains($key)) {
+    $result = $this.CFG['_always_'][$key];
+    }
+    }
+    $this.isExcept($result.Length -eq 0, "Not found key $($key) in section name $($path)");
+    try{
+    if ( ($result.gettype() -eq ''.gettype()) -and ($result.ToUpper() -eq '_empty_'.ToUpper()) ) { $result='' }
+    }
+    catch {
+    $result=''
+    };
+    return $result;
     }
     [bool] getBool([string]$path, [string]$key){
-        return [bool]$this.getKeyValue($path, $key)
+    return [bool]$this.getKeyValue($path, $key)
     }
     [string] getString([string]$path, [string]$key){
-        return       $this.getKeyValue($path, $key)
+    return       $this.getKeyValue($path, $key)
     }
     [Int] getInt([string]$path, [string]$key){
-        return  [int]$this.getKeyValue($path, $key)
+    return  [int]$this.getKeyValue($path, $key)
     }
     [long] getLong([string]$path, [string]$key){
-        return [long]$this.getKeyValue($path, $key)
+    return [long]$this.getKeyValue($path, $key)
     }
 
     ################## saveToFile ###########################
     [Void] saveToFile(){
-        $this.saveToFile($this.filename, $this.isOverwrite);
+    $this.saveToFile($this.filename, $this.isOverwrite);
     }
     [Void] saveToFile([bool]$isOverwrite){
-        $this.saveToFile($this.filename, $isOverwrite);
+    $this.saveToFile($this.filename, $isOverwrite);
     }
     [Void] saveToFile([string]$filename){
-        $this.saveToFile($filename, $this.isOverwrite);
+    $this.saveToFile($filename, $this.isOverwrite);
     }
     [Void] saveToFile([string]$filename, [bool]$isOverwrite){
     }
 
     ################## isHashtable ###########################
     [bool] isHashtable($value){
-        #return ($value -is [Hashtable]) -or ($value -is [System.Collections.Specialized.OrderedDictionary]);
-        return ($value -is [System.Collections.IDictionary]);
+    #return ($value -is [Hashtable]) -or ($value -is [System.Collections.Specialized.OrderedDictionary]);
+    return ($value -is [System.Collections.IDictionary]);
     }
 
     ################## toJson ###########################
     [String] ToString(){
-        return $this.ToJson();
+    return $this.ToJson();
     }
     [String] ToJson() {
-        return ($this | ConvertTo-Json -Depth 100);
+    return ($this | ConvertTo-Json -Depth 100);
     }
 }
+
 
 ### +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #    [IniCFG]
@@ -563,6 +595,7 @@ Class IniCFG : FileCFG {
     # то в [hashtable][$section][$key] будет прописано значение valueVariable.
 	###############################################################################
     [Hashtable]importInifile([string]$filename){
+        ([FileCFG]$this).importInifile($filename);
         $iniObj = [ordered]@{}
         $this.isExcept(!$filename, "Not defined Filename for file configuration.")
         $isFile = Test-Path -Path "$($filename)" -PathType Leaf
@@ -735,8 +768,9 @@ class JsonCFG : FileCFG
     }
 
     [Hashtable]
-    importInifile([string]$filename)
+    importInifile([string]$filename)# : base($filename)
     {
+        ([FileCFG]$this).importInifile($filename);
         $iniObj = [ordered]@{}
         if ($filename -or ($filename.ToUpper() -ne "_empty_".ToUpper()) )
         {
