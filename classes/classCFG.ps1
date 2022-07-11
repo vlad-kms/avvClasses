@@ -344,6 +344,7 @@ Class FileCFG {
         #   то перейти к следующему элементу
         # если его нет
         #   то создать и перейти к следующему, если при создании не было ошибок
+        $path = $this.normalizeSection($path);
         $arrPath = $path.Split('.', [StringSplitOptions]::RemoveEmptyEntries);
         $currentPath = $this.CFG;
         $arrPath.foreach({
