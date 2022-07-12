@@ -569,6 +569,11 @@ Class FileCFG {
     {
         return ($this | ConvertTo-Json -Depth 100);
     }
+    [String] ToJson([string]$path)
+    {
+        return ($this.getSection($path) | ConvertTo-Json -Depth 100);
+    }
+
 }
 
 
