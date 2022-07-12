@@ -422,44 +422,44 @@ Class FileCFG {
     #   Если key='': $true если путь есть или смогли создать, иначе $false
     ##########################################################
     [bool]  setKeyValue([string]$path, [string]$key, [Object]$value){
-    $result = $false;
-    $currentPath = $null;
-    if (!$this.isReadOnly) {
-    # здесь только если свойство isReadOnly != $True
-    $r = $this.readSection($path);
-    if ($r.code -ne 0)
-    {
-    if ($r.code -eq 1) {
-    # секции нет, создать ее
-    $currentPath = $this.addSection($Path, '');
-    $result = $true;
-    }
-    elseif ($r.code -eq 2)
-    {
-    # путь есть, но это не секция, а значение
-    $this.isExcept($true,'Нельзя записать $($key) по пути $($path), т.к. путь не является секцией');
-    $result = $false;
-    }
-    else
-    {
-    # неизвестная ошибка
-    $this.isExcept($true, 'Неопределенная ошибка при запсис $($key) по пути $($path)');
-    $result = $false;
-    }
-    }
-    else
-    {
-    $currentPath = $r.result;
-    $result = $true;
-    }
-    # записать значение, если присутствует key и он не равен ''
-    if ($key -and $result)
-    {
-    $currentPath["$key"] = $value
-    $result = $true;
-    }
-    }
-    return $result;
+        $result = $false;
+        $currentPath = $null;
+        if (!$this.isReadOnly) {
+            # здесь только если свойство isReadOnly != $True
+            $r = $this.readSection($path);
+            if ($r.code -ne 0)
+            {
+                if ($r.code -eq 1) {
+                    # секции нет, создать ее
+                    $currentPath = $this.addSection($Path, '');
+                    $result = $true;
+                }
+                elseif ($r.code -eq 2)
+                {
+                    # путь есть, но это не секция, а значение
+                    $this.isExcept($true,'Нельзя записать $($key) по пути $($path), т.к. путь не является секцией');
+                    $result = $false;
+                }
+                else
+                {
+                    # неизвестная ошибка
+                    $this.isExcept($true, 'Неопределенная ошибка при запсис $($key) по пути $($path)');
+                    $result = $false;
+                }
+            }
+            else
+            {
+                $currentPath = $r.result;
+                $result = $true;
+            }
+            # записать значение, если присутствует key и он не равен ''
+            if ($key -and $result)
+            {
+                $currentPath["$key"] = $value
+                $result = $true;
+            }
+        }
+        return $result;
     }
 
     <################################## getKeyValue ##########################################
@@ -475,80 +475,99 @@ Class FileCFG {
                  Если ключа нет ни в требуемой секции, ни в секции [default], то возврат ""
                  Если значение ключа = _empty_, то вернет пустую строку ''
 ###############################################################################>
-    [Object]hidden getKeyValue([string]$path, [string]$key){
-    $result=''
-    <#
-    $res = $this.readSection($path);
-    if ($res.code -ne 0 ) {
-        return $result
+    [Object]hidden getKeyValue([string]$path, [string]$key)
+    {
+        $result=''
+        <#
+        $res = $this.readSection($path);
+        if ($res.code -ne 0 ) {
+            return $result
+        }
+        $section = $res.result;
+        #>
+        $section = $this.getSection($path, '');
+        if ($section -eq $null) { return $result; }
+        if ($section.Contains($key) -and $section[$key])
+        {
+            $result=$section[$key]
+        }
+        else
+        {
+            try{
+                $result=$this.CFG.default[$key]
+            }
+            catch {
+                $result=""
+            }
+        }
+        # Обработка секции [_always_]
+        if ($this.CFG.Contains('_always_') -and $this.isHashtable($this.CFG['_always_']))
+        {
+            if ($this.CFG['_always_'].Contains($key))
+            {
+                $result = $this.CFG['_always_'][$key];
+            }
+        }
+        $this.isExcept($result.Length -eq 0, "Not found key $($key) in section name $($path)");
+        try
+        {
+            if ( ($result.gettype() -eq ''.gettype()) -and ($result.ToUpper() -eq '_empty_'.ToUpper()) ) { $result='' }
+        }
+        catch
+        {
+            $result=''
+        };
+        return $result;
     }
-    $section = $res.result;
-    #>
-    $section = $this.getSection($path, '');
-    if ($section -eq $null) { return $result; }
-    if ($section.Contains($key) -and $section[$key]) {
-    $result=$section[$key]
-    } else {
-    try{
-    $result=$this.CFG.default[$key]
+    [bool] getBool([string]$path, [string]$key)
+    {
+        return [bool]$this.getKeyValue($path, $key)
     }
-    catch {
-    $result=""
+    [string] getString([string]$path, [string]$key)
+    {
+        return [String]$this.getKeyValue($path, $key)
     }
+    [Int] getInt([string]$path, [string]$key)
+    {
+        return  [int]$this.getKeyValue($path, $key)
     }
-    # Обработка секции [_always_]
-    if ($this.CFG.Contains('_always_') -and $this.isHashtable($this.CFG['_always_'])) {
-    if ($this.CFG['_always_'].Contains($key)) {
-    $result = $this.CFG['_always_'][$key];
-    }
-    }
-    $this.isExcept($result.Length -eq 0, "Not found key $($key) in section name $($path)");
-    try{
-    if ( ($result.gettype() -eq ''.gettype()) -and ($result.ToUpper() -eq '_empty_'.ToUpper()) ) { $result='' }
-    }
-    catch {
-    $result=''
-    };
-    return $result;
-    }
-    [bool] getBool([string]$path, [string]$key){
-    return [bool]$this.getKeyValue($path, $key)
-    }
-    [string] getString([string]$path, [string]$key){
-    return       $this.getKeyValue($path, $key)
-    }
-    [Int] getInt([string]$path, [string]$key){
-    return  [int]$this.getKeyValue($path, $key)
-    }
-    [long] getLong([string]$path, [string]$key){
-    return [long]$this.getKeyValue($path, $key)
+    [long] getLong([string]$path, [string]$key)
+    {
+        return [long]$this.getKeyValue($path, $key)
     }
 
     ################## saveToFile ###########################
-    [Void] saveToFile(){
-    $this.saveToFile($this.filename, $this.isOverwrite);
+    [Void] saveToFile()
+    {
+        $this.saveToFile($this.filename, $this.isOverwrite);
     }
-    [Void] saveToFile([bool]$isOverwrite){
-    $this.saveToFile($this.filename, $isOverwrite);
+    [Void] saveToFile([bool]$isOverwrite)
+    {
+        $this.saveToFile($this.filename, $isOverwrite);
     }
-    [Void] saveToFile([string]$filename){
-    $this.saveToFile($filename, $this.isOverwrite);
+    [Void] saveToFile([string]$filename)
+    {
+        $this.saveToFile($filename, $this.isOverwrite);
     }
-    [Void] saveToFile([string]$filename, [bool]$isOverwrite){
+    [Void] saveToFile([string]$filename, [bool]$isOverwrite)
+    {
     }
 
     ################## isHashtable ###########################
-    [bool] isHashtable($value){
-    #return ($value -is [Hashtable]) -or ($value -is [System.Collections.Specialized.OrderedDictionary]);
-    return ($value -is [System.Collections.IDictionary]);
+    [bool] isHashtable($value)
+    {
+        #return ($value -is [Hashtable]) -or ($value -is [System.Collections.Specialized.OrderedDictionary]);
+        return ($value -is [System.Collections.IDictionary]);
     }
 
     ################## toJson ###########################
-    [String] ToString(){
-    return $this.ToJson();
+    [String] ToString()
+    {
+        return $this.ToJson();
     }
-    [String] ToJson() {
-    return ($this | ConvertTo-Json -Depth 100);
+    [String] ToJson()
+    {
+        return ($this | ConvertTo-Json -Depth 100);
     }
 }
 
@@ -558,24 +577,23 @@ Class FileCFG {
 #    Объект для работы с файлом форматов ini
 ### +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Class IniCFG : FileCFG {
-    IniCFG() : base() {
+    IniCFG() : base()
+    {
     }
-    IniCFG([bool]$EaE) : base($EaE) {
+    IniCFG([bool]$EaE) : base($EaE)
+    {
     }
-    IniCFG([string]$FN) : base($FN) {
+    IniCFG([string]$FN) : base($FN)
+    {
     }
-    IniCFG([string]$FN, [bool]$EaE) : base($FN, $EaE) {
+    IniCFG([string]$FN, [bool]$EaE) : base($FN, $EaE)
+    {
     }
-    IniCFG([Hashtable]$CFG) : base($CFG) {
+    IniCFG([Hashtable]$CFG) : base($CFG)
+    {
     }
-    IniCFG([string]$FN, [bool]$EaE, [Hashtable]$CFG): base($FN, $EaE, $CFG) {
-        <#
-        if ($this.isHashtable($CFG)) { $FN = '_empty_'; }
-        $this.filename = $FN;
-        $this.errorAsException = $EaE
-        $this.initFileCFG();
-        if ($this.isHashtable($CFG)) { $this.CFG += $CFG; }
-        #>
+    IniCFG([string]$FN, [bool]$EaE, [Hashtable]$CFG): base($FN, $EaE, $CFG)
+    {
     }
 
     ###############################################################################
