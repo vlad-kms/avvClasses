@@ -1,3 +1,4 @@
+using module '.\avvBase.ps1';
 <#
 # Класс FileCFG базовый класс. Сам по себе бесполезен.
 # Может считывать, записывать, добавлять ключи, значения, секции.
@@ -96,7 +97,9 @@
     [FileCFG]
 Правила именования Java
 #######################################>
-Class FileCFG {
+#. .\avvBase.ps1
+
+Class FileCFG : avvBase {
     [string] $filename      ='';
     [Hashtable] $CFG        =[ordered]@{};
 	[bool] $errorAsException=$false;
@@ -133,12 +136,16 @@ Class FileCFG {
         $this.initFileCFG();
         $this.CFG += $CFG;
     }
-    FileCFG([Hashtable]$CFG) {
+    FileCFG([Hashtable]$CFG) : base ($CFG){
         # входящий hashtable:
         #   @{
-        #       '_obj_'=@{} - значения для свойств объекта
-        #       '_cfg_'=@{} - значение для поля CFG
+        #       '_obj_'           =@{} - значения для свойств объекта базового класса
+        #       '_obj_add_'       =@{} - значения для свойств объекта базового класса
+        #       '_obj_add_value_' =@{} - значения для свойств объекта базового класса
+        #       '_cfg_'=@{}     - значение для поля CFG, заменяют считанные их файла
+        #       '_cfg_add'=@{}  - значение для поля CFG, добавляются к считанным из файла
         #   }h
+<#
         $keyObj = '_obj_';
         $keyCfg = '_cfg_';
         $isFilename = $False;
@@ -161,6 +168,28 @@ Class FileCFG {
             if ( !$isCFG ) { $this.initFileCFG(); }
         }
         if ( $isCFG ) { $this.CFG = $CFG.$keyCfg; }
+#>
+        if (! $this.filename)
+        {
+            $this.filename = '_empty_';
+        }
+        $this.initFileCFG();
+        $keyCurrent='cfg';
+        if ($CFG.Contains($keyCurrent) -and
+                ($CFG.$keyCurrent -ne $null) -and
+                ($CFG.$keyCurrent -is [Hashtable])
+            )
+        {
+            $this.CFG = $CFG.$keyCurrent;
+        }
+        $keyCurrent='cfg_add';
+        if ($CFG.Contains($keyCurrent) -and
+                ($CFG.$keyCurrent -ne $null) -and
+                ($CFG.$keyCurrent -is [Hashtable])
+            )
+        {
+            $this.CFG += $CFG.$keyCurrent;
+        }
     }
 
     [String] getExtensionForClass()
@@ -241,8 +270,9 @@ Class FileCFG {
     normalizeSection ([String]$section)
     {
         $result = $section.trim();
+        if (!$result) { $result = '.'; }
         $isRoot = $false;
-        while (($result.Substring(0, 1) -eq '\') -or ($result.Substring(0, 1) -eq '/'))
+        while ( !$result -or ($result.Substring(0, 1) -eq '\') -or ($result.Substring(0, 1) -eq '/'))
         {
             $isRoot = $true;
             $result = $result.Substring(1, $result.Length -1);
