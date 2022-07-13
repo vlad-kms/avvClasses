@@ -144,31 +144,7 @@ Class FileCFG : avvBase {
         #       '_obj_add_value_' =@{} - значени€ дл€ свойств объекта базового класса
         #       '_cfg_'=@{}     - значение дл€ пол€ CFG, замен€ют считанные их файла
         #       '_cfg_add'=@{}  - значение дл€ пол€ CFG, добавл€ютс€ к считанным из файла
-        #   }h
-<#
-        $keyObj = '_obj_';
-        $keyCfg = '_cfg_';
-        $isFilename = $False;
-        $isCFG = $CFG.Contains($keyCfg) -and ($CFG.$keyCfg -ne $null) -and ($CFG.$keyCfg -is [Hashtable]);
-        if ($CFG.Contains($keyObj))
-        {
-            foreach ($key in ($this | Get-Member -Force -MemberType Properties | Select-Object -ExpandProperty Name) ){
-                if ($CFG.$keyObj.Contains($key)) {
-                    if ($key.ToUpper() -eq 'filename'.ToUpper())
-                    {
-                        $isFilename = $True;
-                    }
-                    $this.$key = $CFG.$keyObj.$key;
-                }
-            }
-            if ( !$isFilename -or !$CFG.$keyObj.filename )
-            {
-                $this.filename = '_empty_';
-            }
-            if ( !$isCFG ) { $this.initFileCFG(); }
-        }
-        if ( $isCFG ) { $this.CFG = $CFG.$keyCfg; }
-#>
+        #   }
         if (! $this.filename)
         {
             $this.filename = '_empty_';
