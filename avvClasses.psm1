@@ -53,45 +53,57 @@ function Get-AvvClass {
         [string]$ClassName,
         [Hashtable]$Params=@{}
     )
-    if ( $Params.Contains('Constructor') -and
-        ($Params['Constructor'] -is [Hashtable]) -and
-        ($Params['Constructor'].Count -ne 0) )
-    {
-        $construct=$Params['Constructor'];
-        $parStr = '';
-        for ($i = 0; $i -lt $Params['Constructor'].Count; $i++)
+    $supportedClasses = Get-ImportClass -Path $pathModules;
+    $isSupported = $True;
+    $supportedClasses.foreach({
+        if ($_.ToUpper() -eq $ClassName.ToUpper())
         {
-            #$str = ([string]$Params['Constructor']["param$($i)"]).Trim();
-            $ht  = $construct["param$($i)"];
-            if ($ht.Count -ne 0)
-            {
-                $parStr += (Hashtable2Params($ht)) + ',';
-            }
+            $isSupported = $True;
+            break;
         }
-        if ($parStr) {
-            $parStr = $parStr.Substring(0, $parStr.Length - 1);
-        }
-        return Invoke-Expression -Command "[$ClassName]::new($parStr)"
-    }
-    elseif (
-            (
-                $Params.Contains('_obj_') -and
-                ($Params['_obj_'] -is [Hashtable]) -and
-                ($Params['_obj_'] -ne $null)
-            ) -or
-            (
-            $Params.Contains('_cfg_') -and
-                    ($Params['_cfg_'] -is [Hashtable]) -and
-                    ($Params['_cfg_'] -ne $null)
-
-            )
-        )
+    })
+    if ($isSupported)
     {
-        return Invoke-Expression -Command ("[$ClassName]::new" + '($Params)' );
+        if ( $Params.Contains('Constructor') -and
+                ($Params['Constructor'] -is [Hashtable]) -and
+                ($Params['Constructor'].Count -ne 0) )
+        {
+            $construct=$Params['Constructor'];
+            $parStr = '';
+            for ($i = 0; $i -lt $Params['Constructor'].Count; $i++)
+            {
+                #$str = ([string]$Params['Constructor']["param$($i)"]).Trim();
+                $ht  = $construct["param$($i)"];
+                if ($ht.Count -ne 0)
+                {
+                    $parStr += (Hashtable2Params($ht)) + ',';
+                }
+            }
+            if ($parStr) {
+                $parStr = $parStr.Substring(0, $parStr.Length - 1);
+            }
+            return Invoke-Expression -Command "[$ClassName]::new($parStr)"
+        }
+        elseif (
+        (
+        $Params.Contains('_obj_') `
+                        -and
+                ($Params['_obj_'] -ne $null) `
+                        -and
+                ($Params['_obj_'] -is [Hashtable])
+        )
+        )
+        {
+            return Invoke-Expression -Command ("[$ClassName]::new" + '($Params)' );
+        }
+        else
+        {
+            return Invoke-Expression -Command "[$ClassName]::new()"
+        }
     }
     else
     {
-        return Invoke-Expression -Command "[$ClassName]::new()"
+        "Класс $($ClassName) не поддерживается" | Write-Host -ForegroundColor Cyan
     }
 }
 
@@ -187,7 +199,8 @@ function Get-ImportClass
     {
         $listIgnored=@()
     }
-    $loadedModules=($listModules| ? { $listIgnored -notcontains $_})
+    $loadedModules=($listModules| Where-Object { $listIgnored -notcontains $_})
+    #$loadedModules=($listModules| ? { $listIgnored -notcontains $_})
     #write-host $loadedModules
     return $loadedModules
 }
