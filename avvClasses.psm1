@@ -44,7 +44,6 @@ function Get-IniCFG
 
 <############################################
 —оздать экземпл€р класса по имени класса.
-—оздавать только без параметров. »нициализировать только после создани€
 ############################################>
 function Hashtable2Params([Hashtable]$ht)
 {
@@ -65,15 +64,8 @@ function Get-AvvClass {
         [string]$ClassName,
         [Hashtable]$Params=@{}
     )
-    $supportedClasses = Get-ImportedModules -Path $pathModules;
+    $isSupported = Get-SupportedClasses;
     $isSupported = $True;
-    $supportedClasses.foreach({
-        if ($_.ToUpper() -eq $ClassName.ToUpper())
-        {
-            $isSupported = $True;
-            break;
-        }
-    })
     if ($isSupported)
     {
         if ( $Params.Contains('Constructor') -and
@@ -167,22 +159,13 @@ function ConvertFrom-JsonToHashtable {
         $casesensitive
     )
 
-    # Perform a test to determine if the inputobject is null, if it is then return an empty hash table
     if ([String]::IsNullOrEmpty($InputObject)) {
         $dict = @{}
     } else {
-        # load the required dll
-        #[void][System.Reflection.Assembly]::LoadWithPartialName("System.Web.Extensions")
-        #$deserializer = New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer
-        #$deserializer.MaxJsonLength = [int]::MaxValue
-        #$dict = $deserializer.DeserializeObject($InputObject)
         [void][System.Reflection.Assembly]::LoadWithPartialName("System.Web.Script.Serialization");
-        #$deserializer = New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer;
         $deserializer = [System.Web.Script.Serialization.JavaScriptSerializer]::new();
         $deserializer.MaxJsonLength = [int]::MaxValue;
         $dict = $deserializer.Deserialize($InputObject, 'Hashtable');
-
-        # If the caseinsensitve is false then make the dictionary case insensitive
         if ($casesensitive -eq $false) {
             $dict = New-Object "System.Collections.Generic.Dictionary[System.String, System.Object]"($dict, [StringComparer]::OrdinalIgnoreCase)
         }
@@ -202,6 +185,7 @@ function Get-SupportedClasses
         [Parameter(Position=0, ValueFromPipeline=$True)]
         [string]$Path=(Get-PathModules)
     )
+    if ($Path -and ($Path.Substring(($Path.Length)-1, 1) -ne "$DS")) { $Path += "$($DS)" }
     return (Get-Content -Path "$($Path)$($filenameSupportedClasses)");
 }
 function IsSupportedClass()
@@ -224,9 +208,11 @@ function Get-ImportedModules
         [Parameter(Position=0, ValueFromPipeline=$True)]
         [string]$Path=(Get-PathModules)
     )
+    Write-Host "Path=$($Path)"
     $listModules=(Get-ChildItem -Path "$($Path)*" -Include '*.ps1' -Name)
     try
     {
+        if ($Path -and ($Path.Substring(($Path.Length)-1, 1) -ne "$DS")) { $Path += "$($DS)" }
         $listIgnored=(Get-Content -Path "$($Path)$($filenameIgnoreModule)")
     }
     catch
