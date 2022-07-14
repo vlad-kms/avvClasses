@@ -1,11 +1,12 @@
 #. .\classes\classLogger.ps1
 
 function Get-InfoModule{
-    $res=@{}
+    $res=[ordered]@{}
     $res.Add('filenameIgnoreModule', "$($filenameIgnoreModule)")
     $res.Add('filenameSupportedClasses', "$($filenameSupportedClasses)")
     $res.Add('pathModules', "$($pathModules)")
     $res.Add('importedModules', (Get-ImportedModules -Path $pathModules))
+    $res.Add('nestedModules', (Get-ImportedModules -Path $pathModules -includeType 'Nested'))
     $res.Add('supportedClasses', (Get-SupportedClasses -Path $pathModules))
     return $res
 }
@@ -64,8 +65,8 @@ function Get-AvvClass {
         [string]$ClassName,
         [Hashtable]$Params=@{}
     )
-    $isSupported = Get-SupportedClasses;
-    $isSupported = $True;
+    $isSupported = isSupportedClass -ClassName $ClassName;
+    #$isSupported = $True;
     if ($isSupported)
     {
         if ( $Params.Contains('Constructor') -and
@@ -186,7 +187,7 @@ function Get-SupportedClasses
         [string]$Path=(Get-PathModules)
     )
     if ($Path -and ($Path.Substring(($Path.Length)-1, 1) -ne "$DS")) { $Path += "$($DS)" }
-    return (Get-Content -Path "$($Path)$($filenameSupportedClasses)");
+    return (Get-Content -Path "$($Path)$($filenameSupportedClasses)") | Where-Object {$_ -replace '^[\#\;].*$'}
 }
 function IsSupportedClass()
 {
@@ -206,21 +207,32 @@ function Get-ImportedModules
 {
     param (
         [Parameter(Position=0, ValueFromPipeline=$True)]
-        [string]$Path=(Get-PathModules)
+        [string]$Path=(Get-PathModules),
+        [ValidateSet('Imported', 'Nested', 'All')]
+        [string]$includeType='Imported'
     )
+    if ($Path -and ($Path.Substring(($Path.Length)-1, 1) -ne "$DS")) { $Path += "$($DS)" }
     $listModules=(Get-ChildItem -Path "$($Path)*" -Include '*.ps1' -Name)
     try
     {
-        if ($Path -and ($Path.Substring(($Path.Length)-1, 1) -ne "$DS")) { $Path += "$($DS)" }
         $listIgnored=(Get-Content -Path "$($Path)$($filenameIgnoreModule)")
     }
     catch
     {
         $listIgnored=@()
     }
-    $loadedModules=($listModules| Where-Object { $listIgnored -notcontains $_})
-    #$loadedModules=($listModules| ? { $listIgnored -notcontains $_})
-    #write-host $loadedModules
+    [array]$loadedModules=@();
+    if ( ($includeType -eq 'All') -or ($includeType -eq 'Imported') )
+    {
+        [array]$loadedModules += ($listModules| Where-Object { $listIgnored -notcontains $_ })
+    }
+    if ( ($includeType -eq 'All') -or ($includeType -eq 'Nested') )
+    {
+        $m = (Get-Module -Name avvClasses).NestedModules | Select-Object Name;
+        $m.foreach({
+            $loadedModules += $_.Name;
+        })
+    }
     return $loadedModules
 }
 
