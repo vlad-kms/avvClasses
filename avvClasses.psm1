@@ -1,8 +1,12 @@
 #. .\classes\classLogger.ps1
 
-function Info-avvTypesv5{
+function Get-InfoModule{
     $res=@{}
+    $res.Add('filenameIgnoreModule', "$($filenameIgnoreModule)")
+    $res.Add('filenameSupportedClasses', "$($filenameSupportedClasses)")
     $res.Add('pathModules', "$($pathModules)")
+    $res.Add('importedModules', (Get-ImportedModules -Path $pathModules))
+    $res.Add('supportedClasses', (Get-SupportedClasses -Path $pathModules))
     return $res
 }
 
@@ -17,7 +21,14 @@ function Get-Logger
         [boolean]$IsExpandTab=$true
     )
     #Logger ([String]$logFile, $LogLevel, [boolean]$isAppend, [int32]$tabWidth){
-    return [Logger]::new($Filename, $LogLevel, $IsAppend, $TabWidth, $IsExpandTab)
+    #return [Logger]::new($Filename, $LogLevel, $IsAppend, $TabWidth, $IsExpandTab)
+    return Get-AvvClass -ClassName 'Logger' -Params @{_obj_=@{
+            logFile =$Filename
+            logLevel=$LogLevel
+            isAppend = $IsAppend
+            TW = $TabWidth
+            isExpandTab = $IsExpandTab
+        }};
 }
 
 function Get-IniCFG
@@ -27,7 +38,8 @@ function Get-IniCFG
         [string]$Filename,
         [bool]$ErrorAsException=$false
     )
-    return [IniCFG]::new($Filename, $ErrorAsException)
+    #return [IniCFG]::new($Filename, $ErrorAsException);
+    return Get-AvvClass -ClassName 'IniCFG' -Params @{_obj_=@{filename=$Filename;errorAsException=$ErrorAsException}}
 }
 
 <############################################
@@ -53,7 +65,7 @@ function Get-AvvClass {
         [string]$ClassName,
         [Hashtable]$Params=@{}
     )
-    $supportedClasses = Get-ImportClass -Path $pathModules;
+    $supportedClasses = Get-ImportedModules -Path $pathModules;
     $isSupported = $True;
     $supportedClasses.foreach({
         if ($_.ToUpper() -eq $ClassName.ToUpper())
@@ -184,16 +196,38 @@ function Get-Version{
 ###########################################################
 ###########################################################
 ###########################################################
-function Get-ImportClass
+function Get-SupportedClasses
+{
+    param (
+        [Parameter(Position=0, ValueFromPipeline=$True)]
+        [string]$Path=(Get-PathModules)
+    )
+    return (Get-Content -Path "$($Path)$($filenameSupportedClasses)");
+}
+function IsSupportedClass()
 {
     param (
         [Parameter(Mandatory=$True, Position=0, ValueFromPipeline=$True)]
-        [string]$Path
+        [string]$ClassName
+    )
+    $sp = (Get-SupportedClasses);
+    for ($i=0; $i -lt $sp.Count; $i++)
+    {
+        $sp[$i] = $sp[$i].ToUpper();
+    }
+    return $sp.Contains($ClassName.ToUpper());
+}
+
+function Get-ImportedModules
+{
+    param (
+        [Parameter(Position=0, ValueFromPipeline=$True)]
+        [string]$Path=(Get-PathModules)
     )
     $listModules=(Get-ChildItem -Path "$($Path)*" -Include '*.ps1' -Name)
     try
     {
-        $listIgnored=(Get-Content -Path "$($Path)$($filenameIgnoreClass)")
+        $listIgnored=(Get-Content -Path "$($Path)$($filenameIgnoreModule)")
     }
     catch
     {
@@ -205,22 +239,36 @@ function Get-ImportClass
     return $loadedModules
 }
 
-$DS='\';
-$global:avvVerMajor=$PSVersionTable.PSVersion.Major;
-
-$filenameIgnoreClass='.avvclassignore'
-# попробовать взять каталог расположения модулей с классами в переменной среды AVVPATHCLASSES
-$pathModules=$Env:AVVPATHCLASSES
-#  если AVVPATHCLASSES не существует, то будем использовать текущий каталог расположения модуля avvTypesv5,
-if (!$pathModules) {
-    $pathModules = (Split-Path $psCommandPath -Parent) + "$($DS)classes"
+function Get-PathModules()
+{
+    $result=$Env:AVVPATHCLASSES
+    #  если AVVPATHCLASSES не существует, то будем использовать текущий каталог расположения модуля avvTypesv5,
+    if ($result -and ($result.Substring(($result.Length)-1, 1) -ne "$DS")) { $result+="$($DS)" }
+    if (!$result) {
+        $result = (Split-Path $psCommandPath -Parent) + "$($DS)classes"
+    }
+    if ($result -and ($result.Substring(($result.Length)-1, 1) -ne "$DS")) { $result+="$($DS)" }
+    return $result;
 }
+
+$DS='\';
+#$global:avvVerMajor=$PSVersionTable.PSVersion.Major;
+$filenameIgnoreModule='.avvmoduleignore'
+$filenameSupportedClasses='.avvclassessupported'
+# попробовать взять каталог расположения модулей с классами в переменной среды AVVPATHCLASSES
+#$pathModules=$Env:AVVPATHCLASSES
+#  если AVVPATHCLASSES не существует, то будем использовать текущий каталог расположения модуля avvTypesv5,
+#if (!$pathModules) {
+#    $pathModules = (Split-Path $psCommandPath -Parent) + "$($DS)classes"
+#}
+$pathModules=Get-PathModules;
+
 #  если две предыдущих попытки неудачны, то пробуем .\classes. НЕ РАБОТАЕТ почему-то
 #if (!$pathModules) { $pathModules=".$($DS)classes" }
 
 if ($pathModules -and ($pathModules.Substring(($pathModules.Length)-1, 1) -ne "$DS")) { $pathModules+="$($DS)" }
 ###Write-Host $pathModules
-$ic=Get-ImportClass -Path $pathModules
+$ic=Get-ImportedModules -Path $pathModules
 $ic.foreach({
     . "$($pathModules)$_"
 })
