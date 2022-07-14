@@ -208,7 +208,6 @@ function Get-ImportedModules
         [Parameter(Position=0, ValueFromPipeline=$True)]
         [string]$Path=(Get-PathModules)
     )
-    Write-Host "Path=$($Path)"
     $listModules=(Get-ChildItem -Path "$($Path)*" -Include '*.ps1' -Name)
     try
     {
