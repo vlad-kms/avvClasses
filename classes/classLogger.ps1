@@ -1,4 +1,7 @@
-Class Logger {
+using module '.\avvBase.ps1';
+#. '.\avvBase.ps1'
+
+Class Logger : avvBase {
     [int32]$logLevel
     [boolean]$isAppend
     [string]$logFile
@@ -80,6 +83,9 @@ Class Logger {
         else {
             $this.logLevel=-1
         }
+    }
+    Logger ([Hashtable]$Params) : base($Params)
+    {
     }
 
     [void]initDefault([int]$logLevel) {
