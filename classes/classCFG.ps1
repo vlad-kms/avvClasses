@@ -467,6 +467,14 @@ Class FileCFG : avvBase {
         }
         return $result;
     }
+    [bool] setString([string]$path, [string]$key, [string]$value)
+    {
+        return $this.setKeyValue($path, $key, $value);
+    }
+    [bool] setInt([string]$path, [string]$key, [Int]$value)
+    {
+        return $this.setKeyValue($path, $key, $value);
+    }
 
     <################################## getKeyValue ##########################################
     —читать значение ключа, учитыва€ секцию default
