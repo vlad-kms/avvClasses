@@ -71,8 +71,10 @@
     # В целях обеспечения оптимальной производительности функции для экспорта из этого модуля не используют подстановочные знаки и не удаляют запись. Используйте пустой массив, если нет функций для экспорта.
     FunctionsToExport = @(
         'Get-Logger', 'Get-IniCFG', 'Get-AvvClass', 'Get-InfoModule',
-        'ConvertFrom-JsonToHashtable', 'ConvertJSONToHash', 'Get-Version',
-        'IsSupportedClass'
+        'ConvertFrom-JsonToHashtable', 'ConvertJSONToHash',
+        'IsSupportedClass',
+        'Get-SupportedClasses', 'Get-ImportedModules',
+        'Get-Version'
     )
     #FunctionsToExport = '*'
 
