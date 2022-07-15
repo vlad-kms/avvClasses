@@ -2,7 +2,6 @@ class avvBase {
     avvBase ()
     {}
 
-
     # входящий hashtable:
     #   @{
     #       '_obj_'=@{} - значения для свойств объекта
@@ -40,5 +39,10 @@ class avvBase {
                 }
             }
         }
+    }
+
+    [String] ToJson()
+    {
+        return ($this | ConvertTo-Json -Depth 1);
     }
 }

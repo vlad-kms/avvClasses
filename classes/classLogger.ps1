@@ -7,6 +7,7 @@ Class Logger : avvBase {
     [string]$logFile        = '';
     [int32]$TW              = 4;
     [boolean]$isExpandTab   = $True;
+    [System.Management.Automation.Host.PSHost]$HostVar=$null;
 
     <####################################################
     #                   Constructors
@@ -338,6 +339,14 @@ Class Logger : avvBase {
                 $this.isExpandTab, $this.TW, $ClassMSG,
                 $BColor, $FColor, $HostVar)
     }
+    [void] log ([string]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG,
+                    $BColor, $FColor
+                )
+    {
+        [Logger]::log($this.logFile, $Msg, $TabCount, $UseDate, $Log, $this.logLevel, $Always,
+                $this.isExpandTab, $this.TW, $ClassMSG,
+                $BColor, $FColor, $this.HostVar)
+    }
     [void] log ([string]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always,  [string]$ClassMSG){
         $this.log($Msg, $TabCount, $UseDate, $Log, $Always, $ClassMSG, $null, $null, $null)
     }
@@ -356,6 +365,14 @@ Class Logger : avvBase {
             $this.log($str, $TabCount, $UseDate, $Log, $Always, $ClassMSG, $BColor, $FColor, $HostVar)
         }
     }
+    [void] log ([string[]]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG,
+                    $BColor, $FColor
+                )
+    {
+        foreach ($str in $Msg) {
+            $this.log($str, $TabCount, $UseDate, $Log, $Always, $ClassMSG, $BColor, $FColor, $this.HostVar)
+        }
+    }
     [void] log ([string[]]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG){
         $this.log($Msg, $TabCount, $UseDate, $Log, $Always, $ClassMSG, $null, $null, $null)
     }
@@ -372,6 +389,13 @@ Class Logger : avvBase {
     {
         $str=[String]::join("`n", $Msg)
         $this.log([string]$str, $TabCount, $UseDate, $Log, $Always, $ClassMSG, $BColor, $FColor, $HostVar)
+    }
+    [void] log ([array]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG,
+                    $BColor, $FColor
+                )
+    {
+        $str=[String]::join("`n", $Msg)
+        $this.log([string]$str, $TabCount, $UseDate, $Log, $Always, $ClassMSG, $BColor, $FColor, $this.HostVar)
     }
 
     [void] log ([array]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG){
