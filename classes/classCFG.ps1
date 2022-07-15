@@ -97,7 +97,7 @@ using module '.\avvBase.ps1';
     [FileCFG]
 Правила именования Java
 #######################################>
-#. .\avvBase.ps1
+. .\avvBase.ps1
 
 Class FileCFG : avvBase {
     [string] $filename      ='';
@@ -587,7 +587,6 @@ Class FileCFG : avvBase {
     {
         return ($this.getSection($path) | ConvertTo-Json -Depth 100);
     }
-
 }
 
 
