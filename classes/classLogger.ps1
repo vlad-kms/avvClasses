@@ -283,7 +283,8 @@ Class Logger : avvBase {
                         }
                     }
                     default {
-                        $str = $str.Trim()
+                        #$str = $str.Trim()
+                        $str = $str;
                     }
                 }
                 if ( $isExpandTab ) { $str=[logger]::expandTab($str, $TabWidth) }
