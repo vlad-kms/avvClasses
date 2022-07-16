@@ -283,7 +283,8 @@ Class Logger : avvBase {
                         }
                     }
                     default {
-                        $str = $str.Trim()
+                        #$str = $str.Trim()
+                        $str = $str;
                     }
                 }
                 if ( $isExpandTab ) { $str=[logger]::expandTab($str, $TabWidth) }
@@ -369,9 +370,7 @@ Class Logger : avvBase {
                     $BColor, $FColor
                 )
     {
-        foreach ($str in $Msg) {
-            $this.log($str, $TabCount, $UseDate, $Log, $Always, $ClassMSG, $BColor, $FColor, $this.HostVar)
-        }
+        $this.log($Msg, $TabCount, $UseDate, $Log, $Always, $ClassMSG, $BColor, $FColor, $this.HostVar);
     }
     [void] log ([string[]]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG){
         $this.log($Msg, $TabCount, $UseDate, $Log, $Always, $ClassMSG, $null, $null, $null)
@@ -394,8 +393,7 @@ Class Logger : avvBase {
                     $BColor, $FColor
                 )
     {
-        $str=[String]::join("`n", $Msg)
-        $this.log([string]$str, $TabCount, $UseDate, $Log, $Always, $ClassMSG, $BColor, $FColor, $this.HostVar)
+        $this.log($Msg, $TabCount, $UseDate, $Log, $Always, $ClassMSG, $BColor, $FColor, $this.HostVar)
     }
 
     [void] log ([array]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG){

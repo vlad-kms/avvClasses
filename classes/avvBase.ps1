@@ -25,7 +25,7 @@ class avvBase {
         {
             $params.$keyObj.Keys.foreach({
                 #$this[$_] = $params.$keyObj[$_];
-                Write-Host "$($_) === $($params.$keyObj[$_]))"
+                #Write-Host "$($_) === $($params.$keyObj[$_]))"
                 $this | Add-Member -MemberType NoteProperty -Name $_ -Value $params.$keyObj[$_]
             })
         }
