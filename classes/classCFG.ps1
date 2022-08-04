@@ -587,7 +587,6 @@ Class FileCFG : avvBase {
     {
         return ($this.getSection($path) | ConvertTo-Json -Depth 100);
     }
-
 }
 
 

@@ -2,7 +2,6 @@ class avvBase {
     avvBase ()
     {}
 
-
     # входящий hashtable:
     #   @{
     #       '_obj_'=@{} - значения для свойств объекта
@@ -26,7 +25,7 @@ class avvBase {
         {
             $params.$keyObj.Keys.foreach({
                 #$this[$_] = $params.$keyObj[$_];
-                Write-Host "$($_) === $($params.$keyObj[$_]))"
+                #Write-Host "$($_) === $($params.$keyObj[$_]))"
                 $this | Add-Member -MemberType NoteProperty -Name $_ -Value $params.$keyObj[$_]
             })
         }
@@ -40,5 +39,10 @@ class avvBase {
                 }
             }
         }
+    }
+
+    [String] ToJson()
+    {
+        return ($this | ConvertTo-Json -Depth 1);
     }
 }

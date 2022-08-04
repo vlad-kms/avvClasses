@@ -2,17 +2,17 @@ using module '.\avvBase.ps1';
 #. '.\avvBase.ps1'
 
 Class Logger : avvBase {
-    [int32]$logLevel
-    [boolean]$isAppend
-    [string]$logFile
-    [int32]$TW
-    [boolean]$isExpandTab
+    [int32]$logLevel        = 1;
+    [boolean]$isAppend      = $True;
+    [string]$logFile        = '';
+    [int32]$TW              = 4;
+    [boolean]$isExpandTab   = $True;
+    [System.Management.Automation.Host.PSHost]$HostVar=$null;
 
     <####################################################
     #                   Constructors
     ####################################################>
     Logger () {
-        $this.initDefault(1)
         $fl = $this.initFile([System.IO.Path]::GetTempFileName())
         if ( $fl ) {
             $this.logFile=$fl
@@ -24,7 +24,6 @@ Class Logger : avvBase {
     }
 
     Logger ([String]$logFile){
-        $this.initDefault(1)
         $fl = $this.initFile($logFile)
         if ( $fl ) {
             $this.logFile=$fl
@@ -35,7 +34,6 @@ Class Logger : avvBase {
         }
     }
     Logger ([String]$logFile, [int]$logLevel){
-        $this.initDefault($logLevel)
         $fl = $this.initFile($logFile)
         if ( $fl ) {
             $this.logFile=$fl
@@ -46,7 +44,6 @@ Class Logger : avvBase {
         }
     }
     Logger ([String]$logFile, [int]$logLevel, [boolean]$isAppend){
-        $this.initDefault($logLevel)
         $this.isAppend = $isAppend
 
         $fl = $this.initFile($logFile)
@@ -58,7 +55,6 @@ Class Logger : avvBase {
         }
     }
     Logger ([String]$logFile, [int]$logLevel, [boolean]$isAppend, [int32]$tabWidth){
-        $this.initDefault($logLevel)
         $this.isAppend = $isAppend
         $this.TW = $tabWidth
 
@@ -71,31 +67,18 @@ Class Logger : avvBase {
         }
     }
     Logger ([String]$logFile, [int]$logLevel, [boolean]$isAppend, [int32]$tabWidth, [bool]$isExpandTab){
-        $this.initDefault($logLevel)
         $this.isAppend = $isAppend
         $this.TW = $tabWidth
         $this.isExpandTab = $isExpandTab
 
-        $fl = $this.initFile($logFile)
-        if ( $fl ) {
-            $this.logFile=$fl
-        }
-        else {
-            $this.logLevel=-1
-        }
     }
     Logger ([Hashtable]$Params) : base($Params)
     {
+        $fl = $this.initFile($this.logFile)
+        if ( !$fl ) {
+            $this.logLevel=-1
+        }
     }
-
-    [void]initDefault([int]$logLevel) {
-        $this.isExpandTab = $True
-        $this.TW       = 4
-        $this.isAppend = $True
-        $this.logLevel = $logLevel
-        $this.logFile  = ""
-    }
-
     <##########################################################
                         Methods
     ##########################################################>
@@ -104,6 +87,12 @@ Class Logger : avvBase {
         return [logger]::initFile($logFile, $this.isAppend)
     }
 
+    <##############################################################################################
+    # Инициализация файла для логов.
+    # $logFile  - имя файла для логов. Если является абсолютным или начинается с '\' или '.\', то
+    #             и является именем файла. Иначе будет вычислен, %TEMP%\$logFile.
+    # $isAppend - false, значит создать новый файл, иначе оставить существующий.
+    ###############################################################################################>
     static [string]initFile ([String]$logFile, [boolean]$isAppend) {
         $Result=$logFile
         if ( !$logFile) {
@@ -113,7 +102,7 @@ Class Logger : avvBase {
         if ( !([logger]::isAbsolutePath($logFile)) ) {
             # абсолютный путь и имя файла
             $result = [Environment]::GetEnvironmentVariable('TEMP')
-            if ( $logFile.Substring(0,1) -ne '\' ) {
+            if ( $result.Substring($Result.Length - 1,1) -ne '\' ) {
                 $result += '\'
             }
             $result+=$logFile
@@ -124,7 +113,7 @@ Class Logger : avvBase {
         if (! (Test-Path $PathLog -PathType Container) ) {
             New-Item $PathLog -ItemType Directory | Out-Null
         }
-#>
+        #>
         if ( Test-Path $Result -PathType Any ) {
             if ( Test-Path $Result -PathType Container ) {
                 $Result = ""
@@ -192,14 +181,15 @@ Class Logger : avvBase {
     ##############################################
     static [boolean]isAbsolutePath([string]$Path) {
         $Result=$False
-        if ( ($path.Substring(1, 1) -eq ':') -or ($path.Substring(0, 2) -eq '\\') ) {
+        $Path = $Path.Trim();
+        if ( (Split-Path -IsAbsolute -Path $path) -or ($path.Substring(0, 1) -eq '\') -or ($path.Substring(0, 2) -eq '.\') ) {
             $Result=$True
         }
         return $Result
     }
 
     <############################################################################################################
-        FileName    -   имя файла? relf gbcfnm логи
+        FileName    -   имя файла, куда писать логи
         Msg         -   строка лога, предварительно разбивается на массив строк по символу '`n' (перевод строки)
         TabCount- сколько TAB'ов отступать от начала строки (от 0 и больше)
         UseDate -   использование даты в строке лога
@@ -228,11 +218,15 @@ Class Logger : avvBase {
     ############################################################################################################>
     static [void] log ([string]$FileName, [string]$Msg, [int32]$TabCount, [int32]$UseDate,
                        [int32]$Log, [int32]$logLevel, [boolean]$Always=$False, [boolean]$isExpandTab,
-                       [int32]$TabWidth, [string]$ClassMSG){
+                       [int32]$TabWidth, [string]$ClassMSG,
+                       $BColor, $FColor, $HostVar)
+    {
         if ( !$Msg) { return }
         if ( ($logLevel -le 0) -or ( $Log -le 0) ){ return }
         if (!$FileName -or ($FileName -eq '') ) { return }
+        # путь к лог-файлу
         $PL = Split-Path $FileName -Parent
+        # создать каталог, если его нет
         if (! (Test-Path $PL -PathType Container) ) {
             New-Item $PL -ItemType Directory |Out-Null
         }
@@ -249,7 +243,6 @@ Class Logger : avvBase {
             #$as
             $i=0
             foreach ($str in $as) {
-
                 Switch ( $UseDate) {
                     0 {
                         $str = "".PadLeft($TabCount, "`t") + $str.Trim()
@@ -290,7 +283,8 @@ Class Logger : avvBase {
                         }
                     }
                     default {
-                        $str = $str.Trim()
+                        #$str = $str.Trim()
+                        $str = $str;
                     }
                 }
                 if ( $isExpandTab ) { $str=[logger]::expandTab($str, $TabWidth) }
@@ -303,41 +297,136 @@ Class Logger : avvBase {
                     }
                 }
                 Out-File -FilePath $FileName -encoding "default" -InputObject "$($str)" -Append
+                if ( ($HostVar -ne $null) -and ($HostVar -is [System.Management.Automation.Host.PSHost]) )
+                {
+                    try
+                    {
+                        $BC = [ConsoleColor]$BColor;
+                    }
+                    catch
+                    {
+                        $BC = ([Logger]::getDefaultColor($HostVar)).Background;
+                    }
+                    try
+                    {
+                        $FC = [ConsoleColor]$FColor;
+                    }
+                    catch
+                    {
+                        $FC = ([Logger]::getDefaultColor($HostVar)).Foreground;
+                    }
+                    switch ($HostVar.Name) {
+                        'ConsoleHost' {
+                            "$($Str)" | Write-Host -BackgroundColor $BC -ForegroundColor $FC;
+                        }
+                        'Windows PowerShell ISE Host'{
+                            "$($Str)" | Write-Host;
+                        }
+                        default {
+                            "$($Str)" | Write-Host -BackgroundColor $BC -ForegroundColor $FC;
+                        }
+                    }
+                }
                 $i += 1
             } ### foreach ($str in $as) {
         } ### if ( ($Log -le $logLevel) -or $Always ) {
     }
-
-    [void] log ([string]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG){
-        [Logger]::log($this.logFile, $Msg, $TabCount, $UseDate, $Log, $this.logLevel, $Always, $this.isExpandTab, $this.TW, $ClassMSG)
+    ### [string]
+    [void] log ([string]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG,
+                    $BColor, $FColor, $HostVar
+                )
+    {
+        [Logger]::log($this.logFile, $Msg, $TabCount, $UseDate, $Log, $this.logLevel, $Always,
+                $this.isExpandTab, $this.TW, $ClassMSG,
+                $BColor, $FColor, $HostVar)
+    }
+    [void] log ([string]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG,
+                    $BColor, $FColor
+                )
+    {
+        [Logger]::log($this.logFile, $Msg, $TabCount, $UseDate, $Log, $this.logLevel, $Always,
+                $this.isExpandTab, $this.TW, $ClassMSG,
+                $BColor, $FColor, $this.HostVar)
+    }
+    [void] log ([string]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always,  [string]$ClassMSG){
+        $this.log($Msg, $TabCount, $UseDate, $Log, $Always, $ClassMSG, $null, $null, $null)
     }
     [void] log ([string]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always){
-        $this.log($Msg, $TabCount, $UseDate, $Log, $Always, '')
+        $this.log($Msg, $TabCount, $UseDate, $Log, $Always, '', $null, $null, $null)
     }
     [void] log ([string]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log){
-        $this.log($Msg, $TabCount, $UseDate, $Log, $false, '')
+        $this.log($Msg, $TabCount, $UseDate, $Log, $false, '', $null, $null, $null)
     }
-
-    [void] log ([string[]]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG){
+    ### [string[]]
+    [void] log ([string[]]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG,
+                    $BColor, $FColor, $HostVar
+                )
+    {
         foreach ($str in $Msg) {
-            $this.log($str, $TabCount, $UseDate, $Log, $Always, $ClassMSG)
+            $this.log($str, $TabCount, $UseDate, $Log, $Always, $ClassMSG, $BColor, $FColor, $HostVar)
         }
     }
+    [void] log ([string[]]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG,
+                    $BColor, $FColor
+                )
+    {
+        $this.log($Msg, $TabCount, $UseDate, $Log, $Always, $ClassMSG, $BColor, $FColor, $this.HostVar);
+    }
+    [void] log ([string[]]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG){
+        $this.log($Msg, $TabCount, $UseDate, $Log, $Always, $ClassMSG, $null, $null, $null)
+    }
     [void] log ([string[]]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always){
-        $this.log($Msg, $TabCount, $UseDate, $Log, $Always, '')
+        $this.log($Msg, $TabCount, $UseDate, $Log, $Always, '', $null, $null, $null)
     }
     [void] log ([string[]]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log){
-        $this.log($Msg, $TabCount, $UseDate, $Log, $false, '')
+        $this.log($Msg, $TabCount, $UseDate, $Log, $false, '', $null, $null, $null)
+    }
+    ### [array]
+    [void] log ([array]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG,
+                    $BColor, $FColor, $HostVar
+                )
+    {
+        $str=[String]::join("`n", $Msg)
+        $this.log([string]$str, $TabCount, $UseDate, $Log, $Always, $ClassMSG, $BColor, $FColor, $HostVar)
+    }
+    [void] log ([array]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG,
+                    $BColor, $FColor
+                )
+    {
+        $this.log($Msg, $TabCount, $UseDate, $Log, $Always, $ClassMSG, $BColor, $FColor, $this.HostVar)
     }
 
     [void] log ([array]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always, [string]$ClassMSG){
-        $str=[String]::join("`n", $Msg)
-        $this.log([string]$str, $TabCount, $UseDate, $Log, $Always, $ClassMSG)
+        $this.log($Msg, $TabCount, $UseDate, $Log, $Always, $ClassMSG, $null, $null, $null)
     }
     [void] log ([array]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log, [boolean]$Always){
-        $this.log($Msg, $TabCount, $UseDate, $Log, $Always, '')
+        $this.log($Msg, $TabCount, $UseDate, $Log, $Always, '', $null, $null, $null)
     }
     [void] log ([array]$Msg, [int32]$TabCount, [int32]$UseDate, [int32]$Log){
-        $this.log($Msg, $TabCount, $UseDate, $Log, $false, '')
+        $this.log($Msg, $TabCount, $UseDate, $Log, $false, '', $null, $null, $null)
     }
+
+    static [Hashtable] getDefaultColor($HostVar)
+    {
+        $BColor = [System.ConsoleColor]'DarkBlue';
+        $FColor = [System.ConsoleColor]"White";
+        switch ($HostVar.Name) {
+            'ConsoleHost' {
+                $BColor = $HostVar.ui.rawui.backgroundcolor;
+                $FColor = $HostVar.ui.rawui.Foregroundcolor;
+            }
+            'Windows PowerShell ISE Host'{
+                $BColor = $HostVar.PrivateData.ConsolePaneBackgroundColor;
+                $FColor = $HostVar.PrivateData.ConsolePaneForegroundColor;
+            }
+            default {
+                $BColor = [System.ConsoleColor]'DarkBlue';
+                $FColor = [System.ConsoleColor]"White";
+            }
+        }
+        return @{'Foreground'=$FColor; 'Background'=$BColor;}
+    }
+
+
+
 }
