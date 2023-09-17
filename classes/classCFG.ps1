@@ -55,9 +55,6 @@ using module '.\avvBase.ps1';
 # Если имеется секция [_always_], то значение ключа формируется по правилам:
 # Применяются они после [default] и заменяют все что было до этого, т.е.
 # секция [_always_] переопределяет все остальные параметры.
-# Если в секции нет ключа, а в [default] есть, значение берется из [default].
-# Если в секции есть ключ, неважно есть или нет в [default], значение берется из секции,
-# кроме случая, если значение в секции = '_empty_', значение берется из [default].
 # В отличии от классического ini, есть поддержка вложенных Hashtable'ов.
 # Есть конструктор для создания из Hashtable. Входной объект добавляется через (+) в CFG.
 # В файле ini могут использоваться переменные. Примеры в секции [dns_cli] выше. Переменные
@@ -107,6 +104,7 @@ Class FileCFG : avvBase {
     [bool] $isOverwrite     =$false;
     [bool] $isDebug         =$false;
     [String]hidden $currentSection ='.';
+
     <#################################################
     #   Constructors
     #################################################>
@@ -116,7 +114,8 @@ Class FileCFG : avvBase {
     }
     FileCFG([bool]$EaE){
         $this.filename=$PSCommandPath + $this.getExtensionForClass();
-		$this.errorAsException=$EaE
+		#$this.errorAsException=$EaE
+        $this.errorAsException=$EaE
         $this.initFileCFG();
     }
     FileCFG([string]$FN){
@@ -125,7 +124,8 @@ Class FileCFG : avvBase {
     }
     FileCFG([string]$FN, [bool]$EaE) {
         $this.filename=$FN;
-		$this.errorAsException=$EaE
+		#$this.errorAsException=$EaE
+        $this.errorAsException=$EaE
         $this.initFileCFG();
     }
 
@@ -152,7 +152,7 @@ Class FileCFG : avvBase {
         $this.initFileCFG();
         $keyCurrent='cfg';
         if ($CFG.Contains($keyCurrent) -and
-                ($CFG.$keyCurrent -ne $null) -and
+                ($null -ne $CFG.$keyCurrent) -and
                 ($CFG.$keyCurrent -is [Hashtable])
             )
         {
@@ -160,7 +160,7 @@ Class FileCFG : avvBase {
         }
         $keyCurrent='cfg_add';
         if ($CFG.Contains($keyCurrent) -and
-                ($CFG.$keyCurrent -ne $null) -and
+                ($null -ne $CFG.$keyCurrent) -and
                 ($CFG.$keyCurrent -is [Hashtable])
             )
         {
@@ -168,6 +168,9 @@ Class FileCFG : avvBase {
         }
     }
 
+    <#################################################
+    #   MEMBERS
+    #################################################>
     [String] getExtensionForClass()
     {
         $type = $this.GetType();
@@ -402,7 +405,7 @@ Class FileCFG : avvBase {
             else #if ( $currentPath.Contains($section) -and !$this.isHashtable($currentPath["$section"]) )
             {
                 $result = $null;
-                $this.isExcept(($result -eq $null), "Невозможно создать секцию по данному пути $($path). Уже есть ключ с таким именем.");
+                $this.isExcept(($null -eq $result), "Невозможно создать секцию по данному пути $($path). Уже есть ключ с таким именем.");
             }
         }
         return $result;
@@ -500,26 +503,38 @@ Class FileCFG : avvBase {
         $section = $res.result;
         #>
         $section = $this.getSection($path, '');
-        if ($section -eq $null) { return $result; }
+        if ($null -eq $section) { return $result; }
         if ($section.Contains($key) -and $section[$key])
         {
             $result=$section[$key]
         }
         else
         {
-            try{
+            <#
+                Нет в секции $section ключа $Key 
+                Будем получать значение из секции default
+            #>
+            if ($this.CFG.default.Contains($key)) {
                 $result=$this.CFG.default[$key]
             }
-            catch {
-                $result=""
+            if ($this.CFG.default["${Path}_${key}"]) {
+                $result=$this.CFG.default["${Path}_${key}"]
+            }
+            if ($this.CFG.default["${Path}.${key}"]) {
+                $result=$this.CFG.default["${Path}.${key}"]
             }
         }
         # Обработка секции [_always_]
-        if ($this.CFG.Contains('_always_') -and $this.isHashtable($this.CFG['_always_']))
-        {
+        if ($this.CFG.Contains('_always_') -and $this.isHashtable($this.CFG['_always_'])) {
             if ($this.CFG['_always_'].Contains($key))
             {
                 $result = $this.CFG['_always_'][$key];
+            }
+            if ($this.CFG['_always_'].Contains("${Path}_${key}")) {
+                $result = $this.CFG['_always_']["${Path}_${key}"];
+            }
+            if ($this.CFG['_always_'].Contains("${Path}.${key}")) {
+                $result = $this.CFG['_always_']["${Path}.${key}"];
             }
         }
         $this.isExcept($result.Length -eq 0, "Not found key $($key) in section name $($path)");
