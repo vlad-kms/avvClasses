@@ -93,7 +93,7 @@ function Get-AvvClass {
         (
         $Params.Contains('_obj_') `
                         -and
-                ($Params['_obj_'] -ne $null) `
+                ($null -ne $Params['_obj_']) `
                         -and
                 ($Params['_obj_'] -is [Hashtable])
         )
@@ -123,8 +123,9 @@ function ConvertJSONToHash{
     )
     $hash = @{};
     $keys = $root | Get-Member -MemberType NoteProperty | Select-Object -exp Name;
-    $keys | %{
-        $obj=$root.$($_);
+    #$keys | %{
+    $keys | ForEach-Object{
+            $obj=$root.$($_);
         if($obj -is [PSCustomObject])
         {
             $nesthash=ConvertJSONToHash $obj;
@@ -248,20 +249,18 @@ function Get-PathModules()
     return $result;
 }
 
-$DS='\';
+
+<#=================================================================================
+===================================================================================
+===================================================================================
+===================================================================================#>
+$DS=[System.IO.Path]::DirectorySeparatorChar;
 #$global:avvVerMajor=$PSVersionTable.PSVersion.Major;
 $filenameIgnoreModule='.avvmoduleignore'
 $filenameSupportedClasses='.avvclassessupported'
 # попробовать взять каталог расположения модулей с классами в переменной среды AVVPATHCLASSES
-#$pathModules=$Env:AVVPATHCLASSES
-#  если AVVPATHCLASSES не существует, то будем использовать текущий каталог расположения модуля avvTypesv5,
-#if (!$pathModules) {
-#    $pathModules = (Split-Path $psCommandPath -Parent) + "$($DS)classes"
-#}
+# если AVVPATHCLASSES не существует, то будем использовать текущий каталог расположения модуля,
 $pathModules=Get-PathModules;
-
-#  если две предыдущих попытки неудачны, то пробуем .\classes. НЕ РАБОТАЕТ почему-то
-#if (!$pathModules) { $pathModules=".$($DS)classes" }
 
 if ($pathModules -and ($pathModules.Substring(($pathModules.Length)-1, 1) -ne "$DS")) { $pathModules+="$($DS)" }
 ###Write-Host $pathModules
