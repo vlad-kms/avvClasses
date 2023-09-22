@@ -187,7 +187,8 @@ function Get-SupportedClasses
         [Parameter(Position=0, ValueFromPipeline=$True)]
         [string]$Path=(Get-PathModules)
     )
-    if ($Path -and ($Path.Substring(($Path.Length)-1, 1) -ne "$DS")) { $Path += "$($DS)" }
+    #if ($Path -and ($Path.Substring(($Path.Length)-1, 1) -ne "$DS")) { $Path += "$($DS)" }
+    if ($Path) { $Path = (Join-Path -Path $Path -ChildPath "$($DS)") }
     return (Get-Content -Path "$($Path)$($filenameSupportedClasses)") | Where-Object {$_ -replace '^[\#\;].*$'}
 }
 function IsSupportedClass()
@@ -212,7 +213,8 @@ function Get-ImportedModules
         [ValidateSet('Imported', 'Nested', 'All')]
         [string]$includeType='Imported'
     )
-    if ($Path -and ($Path.Substring(($Path.Length)-1, 1) -ne "$DS")) { $Path += "$($DS)" }
+    #if ($Path -and ($Path.Substring(($Path.Length)-1, 1) -ne "$DS")) { $Path += "$($DS)" }
+    if ($Path) { $Path = (Join-Path -Path $Path -ChildPath "$($DS)") }
     $listModules=(Get-ChildItem -Path "$($Path)*" -Include '*.ps1' -Name)
     try
     {
@@ -241,11 +243,13 @@ function Get-PathModules()
 {
     $result=$Env:AVVPATHCLASSES
     #  если AVVPATHCLASSES не существует, то будем использовать текущий каталог расположения модуля avvTypesv5,
-    if ($result -and ($result.Substring(($result.Length)-1, 1) -ne "$DS")) { $result+="$($DS)" }
-    if (!$result) {
-        $result = (Split-Path $psCommandPath -Parent) + "$($DS)classes"
+    if ($result) {
+        $result = (Join-Path -Path $result -ChildPath "$($DS)")
+    } else {
+        #$result = (Split-Path $psCommandPath -Parent) + "$($DS)classes"
+        $result = (Join-Path -Path $PSScriptPath -Parent "classes")
     }
-    if ($result -and ($result.Substring(($result.Length)-1, 1) -ne "$DS")) { $result+="$($DS)" }
+    if ($result) { $result = (Join-Path -Path $result -ChildPath "$($DS)") }
     return $result;
 }
 
@@ -262,7 +266,8 @@ $filenameSupportedClasses='.avvclassessupported'
 # если AVVPATHCLASSES не существует, то будем использовать текущий каталог расположения модуля,
 $pathModules=Get-PathModules;
 
-if ($pathModules -and ($pathModules.Substring(($pathModules.Length)-1, 1) -ne "$DS")) { $pathModules+="$($DS)" }
+#if ($pathModules -and ($pathModules.Substring(($pathModules.Length)-1, 1) -ne "$DS")) { $pathModules+="$($DS)" }
+if ($pathModules) { $pathModules = (Join-Path -Path $pathModules -ChildPath "$($DS)") }
 ###Write-Host $pathModules
 $ic=Get-ImportedModules -Path $pathModules
 $ic.foreach({

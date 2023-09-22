@@ -1,4 +1,7 @@
 using module '.\avvBase.ps1';
+#using module "D:\Tools\~scripts.ps\avvClasses\classes\avvBase.ps1";
+#. "D:\Tools\~scripts.ps\avvClasses\classes\avvBase.ps1";
+
 <#
 # Класс FileCFG базовый класс. Сам по себе бесполезен.
 # Может считывать, записывать, добавлять ключи, значения, секции.
@@ -99,7 +102,7 @@ using module '.\avvBase.ps1';
 Class FileCFG : avvBase {
     [string] $filename      ='';
     [Hashtable] $CFG        =[ordered]@{};
-	[bool] $errorAsException=$false;
+    [bool] $errorAsException=$false;
     [bool] $isReadOnly      =$true;
     [bool] $isOverwrite     =$false;
     [bool] $isDebug         =$false;
@@ -114,7 +117,7 @@ Class FileCFG : avvBase {
     }
     FileCFG([bool]$EaE){
         $this.filename=$PSCommandPath + $this.getExtensionForClass();
-		#$this.errorAsException=$EaE
+        #$this.errorAsException=$EaE
         $this.errorAsException=$EaE
         $this.initFileCFG();
     }
@@ -124,7 +127,7 @@ Class FileCFG : avvBase {
     }
     FileCFG([string]$FN, [bool]$EaE) {
         $this.filename=$FN;
-		#$this.errorAsException=$EaE
+        #$this.errorAsException=$EaE
         $this.errorAsException=$EaE
         $this.initFileCFG();
     }
@@ -189,9 +192,9 @@ Class FileCFG : avvBase {
         return $res;
     }
     <#
-	#	Инициализация. Проверить существование файла, считать данные из
-	#	файла в hashtable. Если имя файла = '_empty_', то пропуск метода.
-	#	Exception, если не считали, или объект пустой
+    #   Инициализация. Проверить существование файла, считать данные из
+    #   файла в hashtable. Если имя файла = '_empty_', то пропуск метода.
+    #   Exception, если не считали, или объект пустой
     #>
     [bool]initFileCFG() {
         $result=$false;
@@ -203,7 +206,7 @@ Class FileCFG : avvBase {
             $isFile = Test-Path -Path "$($this.filename)" -PathType Leaf;
             #$this.isExcept(!$isFile, $true, "Not exists file configuration: $($this.filename)");
             $this.isExcept(!$isFile, "Not exists file configuration: $($this.filename)");
-	        $this.CFG=$this.importInifile($this.filename);
+            $this.CFG=$this.importInifile($this.filename);
             $result=$this.CFG.Count;
             #$this.isExcept(!$result, "Error parsing file CFG: $($this.filename)")
         }
@@ -230,7 +233,7 @@ Class FileCFG : avvBase {
         } else { return ""; }
     }
 
-	<######################### readSection ############################################
+    <######################### readSection ############################################
     #   Считать секцию
     #   Возврат:
     #       [Hashtable]@{
@@ -268,7 +271,7 @@ Class FileCFG : avvBase {
     }
 
     [Hashtable]readSection([string]$section) {
-		$result = @{};
+        $result = @{};
         $code = 0;
         # массив из строки 'sec1.sec2.sec3...
         $section = $this.normalizeSection($section);
@@ -328,8 +331,9 @@ Class FileCFG : avvBase {
             'code'=$code;
             'result'=$path;
         }
-		return $result;
-	}
+        return $result;
+    }
+    
     [hashtable] getSection([String]$path, $section)
     {
         if ($section) { $path += ".$($section)"}
@@ -337,11 +341,25 @@ Class FileCFG : avvBase {
         if ($res.code -eq 0) { return $res.result; }
         else { return $null; }
     }
+   
     [hashtable] getSection([String]$path)
     {
         return $this.getSection($path, '');
     }
+<#
+    [hashtable] getSectionProcessedKeys([String]$Path, $section)
+    {
+        result= @{};
+        $readSection=$this.getSection($path, $section);
 
+        return $result
+    }
+
+    [hashtable] getSectionProcessedKeys([String]$Path)
+    {
+        return $this.getSectionProcessedKeys($path, '');
+    }
+#>
     [hashtable] addSection([string]$path, [string]$section){
         $result = $null;
         if ($this.isReadOnly) { return $result; }
@@ -486,7 +504,7 @@ Class FileCFG : avvBase {
         [string]$Key  - имя ключа
     Возврат:
         [string] Значение ключа.
-                 Если секция $Path отсутсвует, то ""
+                 Если секция $Path отсутствует, то ""
                  Если ключ есть в требуемой секции, то возвращается значение этого ключа.
                  Если ключа нет в требуемой секции, то возврат ключа из секции [default]
                  Если ключа нет ни в требуемой секции, ни в секции [default], то возврат ""
@@ -644,7 +662,7 @@ Class IniCFG : FileCFG {
     # или данного класса (модуля)
     # $nameVariable=valueVariable. Если переменной нет, то будет пусто.
     # то в [hashtable][$section][$key] будет прописано значение valueVariable.
-	###############################################################################
+    ###############################################################################
     [Hashtable]importInifile([string]$filename){
         ([FileCFG]$this).importInifile($filename);
         $iniObj = [ordered]@{}
@@ -703,7 +721,7 @@ Class IniCFG : FileCFG {
         } ## if ($isFile)
         return $iniObj
     }
-	
+    
     [Void] saveToFile([string]$filename, [bool]$isOverwrite){
         # если $this.filename = '_empty_' или пустой строке, то выход
         if (!$filename -or ($filename.ToUpper() -eq '_empty_'.ToUpper() ))
