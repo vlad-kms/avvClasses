@@ -107,7 +107,7 @@ Class Logger : avvBase {
             }
             $result+=$logFile
         }
-        $FN = Split-Path -Path $Result -Leaf
+        #$FN = Split-Path -Path $Result -Leaf
         $PathLog = Split-Path -Path $Result -Parent
         <#
         if (! (Test-Path $PathLog -PathType Container) ) {
@@ -297,7 +297,7 @@ Class Logger : avvBase {
                     }
                 }
                 Out-File -FilePath $FileName -encoding "default" -InputObject "$($str)" -Append
-                if ( ($HostVar -ne $null) -and ($HostVar -is [System.Management.Automation.Host.PSHost]) )
+                if ( ($null -ne $HostVar) -and ($HostVar -is [System.Management.Automation.Host.PSHost]) )
                 {
                     try
                     {
