@@ -1,10 +1,11 @@
-#. .\classes\classLogger.ps1
+п»ї#. .\classes\classLogger.ps1
 
 function Get-InfoModule{
     $res=[ordered]@{}
     $res.Add('filenameIgnoreModule', "$($filenameIgnoreModule)")
     $res.Add('filenameSupportedClasses', "$($filenameSupportedClasses)")
     $res.Add('pathModules', "$($pathModules)")
+    $res.Add('pathMain', ((Get-Module 'avvClasses').Path))
     $res.Add('importedModules', (Get-ImportedModules -Path $pathModules))
     $res.Add('nestedModules', (Get-ImportedModules -Path $pathModules -includeType 'Nested'))
     $res.Add('supportedClasses', (Get-SupportedClasses -Path $pathModules))
@@ -43,8 +44,16 @@ function Get-IniCFG
     return Get-AvvClass -ClassName 'IniCFG' -Params @{_obj_=@{filename=$Filename;errorAsException=$ErrorAsException}}
 }
 
+function Get-IsHashtable() {
+    param (
+        [Parameter(Mandatory=$True, Position=0, ValueFromPipeline=$True)]
+        $Value
+    )
+    return ($Value -is [System.Collections.IDictionary]);
+}
+
 <############################################
-Создать экземпляр класса по имени класса.
+РЎРѕР·РґР°С‚СЊ СЌРєР·РµРјРїР»СЏСЂ РєР»Р°СЃСЃР° РїРѕ РёРјРµРЅРё РєР»Р°СЃСЃР°.
 ############################################>
 function Hashtable2Params([Hashtable]$ht)
 {
@@ -110,13 +119,13 @@ function Get-AvvClass {
     }
     else
     {
-        "Класс $($ClassName) не поддерживается" | Write-Host -ForegroundColor Cyan
+        "РљР»Р°СЃСЃ $($ClassName) РЅРµ РїРѕРґРґРµСЂР¶РёРІР°РµС‚СЃСЏ" | Write-Host -ForegroundColor Cyan
     }
 }
 
 #################### ConvertJSONToHash #########################
-# Конвертирует PSCustomObject в Hashtable, включая все вложенные свойства,
-# имеющие тип PSCustomObject
+# РљРѕРЅРІРµСЂС‚РёСЂСѓРµС‚ PSCustomObject РІ Hashtable, РІРєР»СЋС‡Р°СЏ РІСЃРµ РІР»РѕР¶РµРЅРЅС‹Рµ СЃРІРѕР№СЃС‚РІР°,
+# РёРјРµСЋС‰РёРµ С‚РёРї PSCustomObject
 function ConvertJSONToHash{
     param(
         [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true)]
@@ -142,7 +151,7 @@ function ConvertJSONToHash{
 }
 
 function ConvertFrom-JsonToHashtable {
-    <# TODO НЕ РАБОТАЕТ, ТОЛКО первый уровень вложенности.
+    <# TODO РќР• Р РђР‘РћРўРђР•Рў, РўРћР›РљРћ РїРµСЂРІС‹Р№ СѓСЂРѕРІРµРЅСЊ РІР»РѕР¶РµРЅРЅРѕСЃС‚Рё.
     .SYNOPSIS
         Helper function to take a JSON string and turn it into a hashtable
     .DESCRIPTION
@@ -244,7 +253,7 @@ function Get-ImportedModules
 function Get-PathModules()
 {
     $result=$Env:AVVPATHCLASSES
-    #  если AVVPATHCLASSES не существует, то будем использовать текущий каталог расположения модуля avvTypesv5,
+    #  РµСЃР»Рё AVVPATHCLASSES РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚, С‚Рѕ Р±СѓРґРµРј РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ С‚РµРєСѓС‰РёР№ РєР°С‚Р°Р»РѕРі СЂР°СЃРїРѕР»РѕР¶РµРЅРёСЏ РјРѕРґСѓР»СЏ avvTypesv5,
     if ($result) {
         $result = (Join-Path -Path $result -ChildPath "$($DS)")
     } else {
@@ -255,7 +264,25 @@ function Get-PathModules()
     return $result;
 }
 
-
+function Include-Modules() {
+    Param(
+        [Parameter(Position=0, ValueFromPipeline=$True)]
+        [string[]]$ClassNames=@(),
+        [switch]$NotForce
+    )
+    # РїРѕРїСЂРѕР±РѕРІР°С‚СЊ РІР·СЏС‚СЊ РєР°С‚Р°Р»РѕРі СЂР°СЃРїРѕР»РѕР¶РµРЅРёСЏ РјРѕРґСѓР»РµР№ СЃ РєР»Р°СЃСЃР°РјРё РІ РїРµСЂРµРјРµРЅРЅРѕР№ СЃСЂРµРґС‹ AVVPATHCLASSES
+    # РµСЃР»Рё AVVPATHCLASSES РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚, С‚Рѕ Р±СѓРґРµРј РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ С‚РµРєСѓС‰РёР№ РєР°С‚Р°Р»РѕРі СЂР°СЃРїРѕР»РѕР¶РµРЅРёСЏ РјРѕРґСѓР»СЏ,
+    $pathModules=Get-PathModules;
+    
+    if ($pathModules) { $pathModules = (Join-Path -Path $pathModules -ChildPath "$($DS)") }
+    ###Write-Host $pathModules
+    $ic=Get-ImportedModules -Path $pathModules
+    $ic.foreach({
+        #. "$($pathModules)$_"
+        #Import-Module -Global (Join-Path -Path "$($pathModules)" -ChildPath $_) -Force:$(!$NotForce)
+        Import-Module (Join-Path -Path "$($pathModules)" -ChildPath $_) -Force -Global
+    })
+}
 <#=================================================================================
 ===================================================================================
 ===================================================================================
@@ -264,9 +291,13 @@ $DS=[System.IO.Path]::DirectorySeparatorChar;
 #$global:avvVerMajor=$PSVersionTable.PSVersion.Major;
 $filenameIgnoreModule='.avvmoduleignore'
 $filenameSupportedClasses='.avvclassessupported'
-# попробовать взять каталог расположения модулей с классами в переменной среды AVVPATHCLASSES
-# если AVVPATHCLASSES не существует, то будем использовать текущий каталог расположения модуля,
+
+# РїРѕРїСЂРѕР±РѕРІР°С‚СЊ РІР·СЏС‚СЊ РєР°С‚Р°Р»РѕРі СЂР°СЃРїРѕР»РѕР¶РµРЅРёСЏ РјРѕРґСѓР»РµР№ СЃ РєР»Р°СЃСЃР°РјРё РІ РїРµСЂРµРјРµРЅРЅРѕР№ СЃСЂРµРґС‹ AVVPATHCLASSES
+# РµСЃР»Рё AVVPATHCLASSES РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚, С‚Рѕ Р±СѓРґРµРј РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ С‚РµРєСѓС‰РёР№ РєР°С‚Р°Р»РѕРі СЂР°СЃРїРѕР»РѕР¶РµРЅРёСЏ РјРѕРґСѓР»СЏ,
 $pathModules=Get-PathModules;
+#Include-Module
+
+<#
 
 #if ($pathModules -and ($pathModules.Substring(($pathModules.Length)-1, 1) -ne "$DS")) { $pathModules+="$($DS)" }
 if ($pathModules) { $pathModules = (Join-Path -Path $pathModules -ChildPath "$($DS)") }
@@ -275,3 +306,4 @@ $ic=Get-ImportedModules -Path $pathModules
 $ic.foreach({
     . "$($pathModules)$_"
 })
+#>
