@@ -133,26 +133,28 @@ Class FileCFG : avvBase {
     }
 
     FileCFG([string]$FN, [bool]$EaE, [Hashtable]$CFG) {
-        $FN = '_empty_';
+        #$FN = '_empty_';
         $this.filename = $FN;
         $this.errorAsException = $EaE
         $this.initFileCFG();
         $this.CFG += $CFG;
     }
-    FileCFG([Hashtable]$CFG) : base ($CFG){
-        # вход€щий hashtable:
+    #FileCFG([Hashtable]$CFG) : base ($CFG){
+    FileCFG([Hashtable]$CFG) : base (){
+            # вход€щий hashtable:
         #   @{
         #       '_obj_'           =@{} - значени€ дл€ свойств объекта базового класса
         #       '_obj_add_'       =@{} - значени€ дл€ свойств объекта базового класса
         #       '_obj_add_value_' =@{} - значени€ дл€ свойств объекта базового класса
-        #       '_cfg_'=@{}     - значение дл€ пол€ CFG, замен€ют считанные их файла
-        #       '_cfg_add'=@{}  - значение дл€ пол€ CFG, добавл€ютс€ к считанным из файла
+        #       'cfg'             =@{} - значение дл€ пол€ CFG, замен€ют считанные из файла
+        #       'cfg_add'         =@{} - значение дл€ пол€ CFG, добавл€ютс€ к считанным из файла
         #   }
         if (! $this.filename)
         {
             $this.filename = '_empty_';
         }
         $this.initFileCFG();
+        $this.initFromHashtable($CFG);
         $keyCurrent='cfg';
         if ($CFG.Contains($keyCurrent) -and
                 ($null -ne $CFG.$keyCurrent) -and
