@@ -8,8 +8,11 @@ class avvBase {
     #       '_obj_add_'=@{} - поля для добавления в объект
     #       '_obj_add_value_'=@{} - значения для добавления к текущим значениям полей объекта
     #   }
-    avvBase ([Hashtable]$params)
-    {
+    avvBase ([Hashtable]$params) {
+        $this.initFromHashtable($params)
+    }
+
+    [void]initFromHashtable([Hashtable]$params) {
         $keyObj = '_obj_';
         if ( $params.Contains($keyObj))
         {

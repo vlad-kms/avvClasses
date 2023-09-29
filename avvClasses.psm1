@@ -90,15 +90,17 @@ function Get-AvvClass {
             return Invoke-Expression -Command "[$ClassName]::new($parStr)"
         }
         elseif (
-        (
-        $Params.Contains('_obj_') `
+            ($Params.Contains('_obj_') `
                         -and
-                ($null -ne $Params['_obj_']) `
+                (null -ne $Params['_obj_']) `
                         -and
                 ($Params['_obj_'] -is [Hashtable])
-        )
+            )
         )
         {
+            return Invoke-Expression -Command ("[$ClassName]::new" + '($Params)' );
+        }
+        elseif ( $null -ne $Params) {
             return Invoke-Expression -Command ("[$ClassName]::new" + '($Params)' );
         }
         else
