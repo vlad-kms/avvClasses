@@ -78,8 +78,9 @@
         'Get-IsHashtable'
         'ConvertFrom-JsonToHashtable', 'ConvertJSONToHash',
         'IsSupportedClass',
-        'Get-SupportedClasses', 'Get-ImportedModules', 'Include-Modules',
-        'Get-Version'
+        'Get-SupportedClasses', 'Get-ImportedModules', 'Use-Modules',
+        'Get-Version',
+        'Merge-Hashtable'
     )
     #FunctionsToExport = '*'
 
