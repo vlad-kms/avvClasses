@@ -155,33 +155,36 @@ Class FileCFG : avvBase {
         #       'cfg'             =@{} - значение для поля CFG, заменяют считанные из файла
         #       'cfg_add'         =@{} - значение для поля CFG, добавляются к считанным из файла
         #   }
-        if ( $CFG.ContainsKey('_obj_')  -and $CFG._obj_.ContainsKey("filename") -and ($null -ne $CFG._obj_.filename) ) {
-            $this.filename = $CFG._obj_.filename;
-        } else {
-            $this.filename = '_empty_';
+        $this.filename = '_empty_';
+
+        if ( $CFG.ContainsKey('Filename') -and ($CFG.Filename) ) {
+            $this.filename = $CFG.Filename;
         }
-        if ( $CFG.ContainsKey('_obj_')  -and $CFG._obj_.ContainsKey("errorAsException") -and ($null -ne $CFG._obj_.filename) ) {
-            $this.errorAsException = $CFG._obj_.errorAsException;
+        $objKey='_obj_'
+        if ( $CFG.ContainsKey($objKey)  -and $CFG.$objKey.ContainsKey("filename") -and $CFG.$objKey.filename ) {
+            $this.filename = $CFG.$objKey.filename;
+        }
+        if ( $CFG.ContainsKey($objKey)  -and $CFG.$objKey.ContainsKey("errorAsException") -and $CFG.$objKey.errorAsException ) {
+            $this.errorAsException = $CFG.$objKey.errorAsException;
         }
 
+        $objKey='_new_'
+        if ( $CFG.ContainsKey($objKey)  -and $CFG.$objKey.ContainsKey("filename") -and $CFG.$objKey.filename ) {
+            $this.filename = $CFG.$objKey.filename;
+        }
+        if ( $CFG.ContainsKey($objKey)  -and $CFG.$objKey.ContainsKey("errorAsException") -and $CFG.$objKey.errorAsException ) {
+            $this.errorAsException = $CFG.$objKey.errorAsException;
+        }
+
+        # считать данные из файла
         $this.initFileCFG();
+        # добавить данные из hashtable CFG
         $this.initFromHashtable($CFG);
         
         $keyCurrent='cfg';
-        if ($CFG.Contains($keyCurrent) -and
-                ($null -ne $CFG.$keyCurrent) -and
-                ($CFG.$keyCurrent -is [Hashtable])
-            )
+        if ($CFG.Contains($keyCurrent) -and $this.isHashtable($CFG.$keyCurrent) )
         {
-            $this.CFG = $CFG.$keyCurrent;
-        }
-        $keyCurrent='cfg_add';
-        if ($CFG.Contains($keyCurrent) -and
-                ($null -ne $CFG.$keyCurrent) -and
-                ($CFG.$keyCurrent -is [Hashtable])
-            )
-        {
-            $this.CFG += $CFG.$keyCurrent;
+            $this.addHashtable($CFG.$keyCurrent, $this.CFG, [FlagAddHashtable]::Merge);
         }
     }
 
@@ -211,7 +214,8 @@ Class FileCFG : avvBase {
     #   Exception, если не считали, или объект пустой
     #>
     [bool]initFileCFG() {
-        $result=$false;
+        $result=0;
+        #if (!$this.filename) {$this.filename = '_EMPTY_'}
         if ($this.filename.ToUpper() -ne '_EMPTY_' )
         {
             # $this.filename != '_empty_';
@@ -348,12 +352,19 @@ Class FileCFG : avvBase {
             'result'=$path;
         }
         # секция с заполненными значениями с учетом секций [default] [_always_]
+        while ($section.StartsWith('.')) { $section=$section.Substring(1, $section.Length-1) }
+        $pathDefs=$this.fillValues($path, $section)
+        $result.Add('resultDefs', $pathDefs)
+        <#
         $pathDefs=[ordered]@{};
         while ($section.StartsWith('.')) { $section=$section.Substring(1, $section.Length-1) }
         $path.Keys.foreach({
             $pathDefs.Add($_, $this.getKeyValueUseDefaultAlways($path, $section, $_))
         });
         $result.Add('resultDefs', $pathDefs)
+        #>
+
+
         <# НЕ НАДО
         # секция с заполненными значениями с учетом секций [default] [_always_]
         # и с добавленными ключами из секции default вида section_key, section.key,
@@ -363,6 +374,24 @@ Class FileCFG : avvBase {
         $result.Add('resultDefsOnly', $pathDefsOnly)
         #>
         return $result;
+    }
+    
+    [hashtable] fillValues ([Hashtable]$path, [String]$section) {
+        $result=[ordered]@{};
+        $path.Keys.foreach({
+            if ($this.isHashtable($path.$_)) {
+                if ($section) {
+                    $s="$($section).$($_)"
+                } else {
+                    $s="$($_)"
+                }
+                $result.Add($_, $this.fillValues($path.$_, $s))
+            } else {
+                $result.Add($_, $this.getKeyValueUseDefaultAlways($path, $section, $_))
+            }
+        });
+        
+        return $result
     }
     
     [hashtable] getSectionValues([String]$path, $section)
@@ -595,85 +624,30 @@ Class FileCFG : avvBase {
         [string] Значение ключа.
                  Если секция $Path отсутствует, то ""
                  Если ключ есть в требуемой секции, то возвращается значение этого ключа.
-                 Если ключа нет в требуемой секции, то возврат ключа из секции [default]
-                 Если ключа нет ни в требуемой секции, ни в секции [default], то возврат ""
+                 Если ключа нет в требуемой секции,
+                   то возврат ключа из секции [default] (при наличии секции default)
+                 При наличии секции _always_, если ключ есть в ней, то берется значение из _always_
+                 Если ключа нет ни в требуемой секции, ни в секции [default], ни в секции [_always_], то возврат ""
                  Если значение ключа = _empty_, то вернет пустую строку ''
     ###############################################################################>
-    [Object]hidden getKeyValue([string]$path, [string]$key)
-    {
+    [Object]hidden getKeyValue([string]$path, [string]$key) {
         $result=''
-        <#
-        $res = $this.readSection($path);
-        if ($res.code -ne 0 ) {
-            return $result
-        }
-        $section = $res.result;
-        #>
         $section = $this.getSection($path, '');
         if ($null -eq $section) { return $result; }
         $result = $this.getKeyValueUseDefaultAlways($section, $path, $key)
-<#
-        if ($section.Contains($key) -and $section[$key])
-        {
-            $result=$section[$key]
-        }
-        else
-        {
-#>
-            <#
-                Нет в секции $section ключа $Key 
-                Будем получать значение из секции default
-            #>
-<#
-            if ($this.CFG.default.Contains($key)) {
-                $result=$this.CFG.default[$key]
-            }
-            if ($this.CFG.default["${Path}_${key}"]) {
-                $result=$this.CFG.default["${Path}_${key}"]
-            }
-            if ($this.CFG.default["${Path}.${key}"]) {
-                $result=$this.CFG.default["${Path}.${key}"]
-            }
-        }
-        # Обработка секции [_always_]
-        if ($this.CFG.Contains('_always_') -and $this.isHashtable($this.CFG['_always_'])) {
-            if ($this.CFG['_always_'].Contains($key))
-            {
-                $result = $this.CFG['_always_'][$key];
-            }
-            if ($this.CFG['_always_'].Contains("${Path}_${key}")) {
-                $result = $this.CFG['_always_']["${Path}_${key}"];
-            }
-            if ($this.CFG['_always_'].Contains("${Path}.${key}")) {
-                $result = $this.CFG['_always_']["${Path}.${key}"];
-            }
-        }
-        $this.isExcept($result.Length -eq 0, "Not found key $($key) in section name $($path)");
-        try
-        {
-            if ( ($result.gettype() -eq ''.gettype()) -and ($result.ToUpper() -eq '_empty_'.ToUpper()) ) { $result='' }
-        }
-        catch
-        {
-            $result=''
-        };
-#>
         return $result;
     }
-    [bool] getBool([string]$path, [string]$key)
-    {
+
+    [bool] getBool([string]$path, [string]$key) {
         return [bool]$this.getKeyValue($path, $key)
     }
-    [string] getString([string]$path, [string]$key)
-    {
+    [string] getString([string]$path, [string]$key) {
         return [String]$this.getKeyValue($path, $key)
     }
-    [Int] getInt([string]$path, [string]$key)
-    {
+    [Int] getInt([string]$path, [string]$key) {
         return  [int]$this.getKeyValue($path, $key)
     }
-    [long] getLong([string]$path, [string]$key)
-    {
+    [long] getLong([string]$path, [string]$key) {
         return [long]$this.getKeyValue($path, $key)
     }
 

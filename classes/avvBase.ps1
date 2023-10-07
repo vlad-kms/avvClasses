@@ -11,6 +11,7 @@ class avvBase : Object {
     avvBase ()
     {
         $this.AddOrMerge = [FlagAddHashtable]::Merge
+        Write-Verbose "Создали объект $($this.getType()) : $($this)"
     }
 
     <#########################################################
@@ -68,7 +69,7 @@ class avvBase : Object {
         }
         $keyObj = '_new_';
         if ( $params.Contains($keyObj)) {
-            $this.addHashtable($params.$keyObj, $this, [FlagAddHashtable]::Merge)
+            $this.addHashtable($params.$keyObj, $this, $this.AddOrMerge)
         }
     }
 
@@ -104,22 +105,31 @@ class avvBase : Object {
         $result = $false
         try {
             if ($null -eq $Dest) {throw "Объект назначения не может быть null"}
+            Write-Verbose "============================================="
+            Write-Verbose "Source: $($Source|ConvertTo-Json -Depth 2)"
+            Write-Verbose "Dest: $($Dest)"
+            Write-Verbose "Action: $($Action)"
             foreach($Key in $Source.Keys) {
                 if ($this.ExistsProperty($Dest, $Key)) {
                     # ключ есть в объекте назначения
-                    Write-Verbose "Ключ $($Key) ЕСТЬ в $($Dest) и флаг $($Action)"
+                    Write-Verbose "Ключ $($Key) ЕСТЬ в Dest"
                     switch ($Action) {
                         ([FlagAddHashtable]::AddOnly) {
-                            Write-Verbose "В объекте Dest есть ключ $Key. Флаг Action = $Action. Ничего не добавляется, ничего не изменяется"
+                            Write-Verbose "В объекте Dest есть ключ $Key. Флаг Action = $Action. Тип значения ключа: $($Dest.$Key.GetType())"
+                            if ($this.isCompositeType($Dest.$Key) -and $this.isCompositeType($Source.$Key)) {
+                                # Dest.Key и Source.Key имеют тип Hashtable или avvBase
+                                Write-Verbose "Рекурсивный вызов с Source.$($Key),  Dest.$($Key), $Action"
+                                $this.addHashtable($Source.$Key, $Dest.$Key, $Action)
+                            }
                         }
                         ([FlagAddHashtable]::Merge) {
                             Write-Verbose "В объекте Dest есть ключ $Key. Флаг Action = $Action. Тип значения ключа: $($Dest.$Key.GetType())"
                             if ($this.isCompositeType($Dest.$Key) -and $this.isCompositeType($Source.$Key)) {
-                                # Dest.Key имеет тип Hashtable или avvBase
+                                # Dest.Key и Source.Key имеют тип Hashtable или avvBase
                                 Write-Verbose "Рекурсивный вызов с Source.$($Key),  Dest.$($Key), $Action"
                                 $this.addHashtable($Source.$Key, $Dest.$Key, $Action)
                             } else {
-                                Write-Verbose "В Dest.Key записали $($Source.$Key)"
+                                Write-Verbose "Записали в                                          : Dest.$($Key) = $($Source.$Key)"
                                 $Dest.$Key = $Source.$Key
                             }
                         }
@@ -129,14 +139,14 @@ class avvBase : Object {
                     } ### switch ($Action) {
                 } else {
                     # ключа нет в объекте назначения
-                    Write-Verbose "=== Здесь: $($key) нет в $($Dest) и флаг $($action)"
+                    Write-Verbose "Ключа $($key) нет в Dest"
                     if ( $this.isHashtable($Dest)) {
                         # добавить к Hashtable
-                        Write-Verbose "Добавить $($Key) к Hashtable $($Dest)"
+                        Write-Verbose "Добавить к Hashtable                                : Dest.$($Key) = $($Source.$key)"
                         $Dest.Add($key, $Source.$key)
                     #} elseif ( ($Dest -is [Object]) -or ($Dest -is [PSObject]) -or ($Dest -is [PSCustomObject]) ) {
                     } elseif ( $this.isObject($Dest) ) {
-                        Write-Verbose "Add-Member к типам Object, PSObject, PSCustomObject : $($Key) = $($Source.$Key)"
+                        Write-Verbose "Add-Member к типам Object, PSObject, PSCustomObject : Dest.$($Key) = $($Source.$Key)"
                         $Dest | Add-Member -NotePropertyName $key -NotePropertyValue $Source.$key
                     } else {
                         Write-Verbose "Не можем добавить $($Key) к Dest типа $($Dest.GetType())"

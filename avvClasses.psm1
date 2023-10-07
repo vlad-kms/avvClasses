@@ -189,6 +189,116 @@ function ConvertFrom-JsonToHashtable {
 function Get-Version{
     return $PSVersionTable;
 }
+
+<# Объединение двух hastable
+    $Source     = hashtable который надо добавить
+    $Dest       = hashtable к которому надо добавить
+    $Action     = $true, только добавление отсутствующих ключей
+                  $false добавление отсутствующих или изменение существующих ключей
+ #>
+
+#function addHashtable([hashtable]$Source, [hashtable]$Dest, [bool]$Action) {
+function addHashtable {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position=0, Mandatory=$True)]
+        [hashtable] $Source,
+        [Parameter(Position=1, Mandatory=$True)]
+        [hashtable] $Dest,
+        [switch] $Action
+    )
+    $result = $Dest
+    try {
+        if ($null -eq $Dest) {throw "Hashtable назначения не может быть null"}
+        Write-Verbose "============================================="
+        Write-Verbose "Source:"
+        Write-Verbose "$($Source | ConvertTo-Json -Depth 5)"
+        Write-Verbose "Dest:"
+        Write-Verbose "$($Dest | ConvertTo-Json -Depth 5)"
+        Write-Verbose "Action: $($Action)"
+        foreach($Key in $Source.Keys) {
+            if ($Dest.ContainsKey($Key)) {
+                # ключ есть в объекте назначения
+                Write-Verbose "Ключ $($Key) ЕСТЬ в Dest"
+                if ($Action) { # AddOnly
+                    Write-Verbose "В hashtable Dest есть ключ $Key. Флаг Action = $Action. Тип значения ключа: $($Dest.$Key.GetType())"
+                    if ( (Get-IsHashtable -Value $Dest.$Key) -and (Get-IsHashtable -Value $Source.$Key) ) {
+                        # Dest.Key и Source.Key имеют тип Hashtable
+                        Write-Verbose "Рекурсивный вызов с Source.$($Key),  Dest.$($Key), $Action"
+                        $result=addHashtable -Source $Source.$Key -Dest $Dest.$Key -Action:$Action
+                    }
+                } else { # Merge)
+                    Write-Verbose "В hashtable Dest есть ключ $Key. Флаг Action = $Action. Тип значения ключа: $($Dest.$Key.GetType())"
+                    #if ($this.isCompositeType($Dest.$Key) -and $this.isCompositeType($Source.$Key)) {
+                    if ( (Get-IsHashtable -Value $Dest.$Key) -and (Get-IsHashtable -Value $Source.$Key) ) {
+                        # Dest.Key и Source.Key имеют тип Hashtable
+                        Write-Verbose "Рекурсивный вызов с Source.$($Key),  Dest.$($Key), $Action"
+                        $result=addHashtable -Source $Source.$Key -Dest $Dest.$Key -Action:$Action
+                    } else {
+                        Write-Verbose "Записали в                                          : Dest.$($Key) = $($Source.$Key)"
+                        $Dest.$Key = $Source.$Key
+                    }
+                } ### if ($Action)
+            } else {
+                # ключа нет в объекте назначения
+                Write-Verbose "Ключа $($key) нет в Dest"
+                if ( (Get-isHashtable -Value $Dest) ) {
+                    # добавить к Hashtable
+                    Write-Verbose "Добавить к Hashtable                                : Dest.$($Key) = $($Source.$key)"
+                    $Dest.Add($key, $Source.$key)
+                <#
+                } elseif ( $this.isObject($Dest) ) {
+                    Write-Verbose "Add-Member к типам Object, PSObject, PSCustomObject : Dest.$($Key) = $($Source.$Key)"
+                    $Dest | Add-Member -NotePropertyName $key -NotePropertyValue $Source.$key
+                #>
+                } else {
+                    Write-Verbose "Не можем добавить $($Key) к Dest типа $($Dest.GetType())"
+                }
+            }
+        }
+        $result=$Dest
+    }
+    catch {
+        $result = $null
+        throw $PSItem
+    }
+    return $result
+}
+
+
+function Merge-Hashtable{
+    [CmdletBinding()]
+    Param(
+        [Parameter(ValueFromPipeline=$True, Position=0, Mandatory=$True)]
+        [hashtable] $Source,
+        [Parameter(Position=1, Mandatory=$True)]
+        [hashtable] $Destination,
+        [switch] $AddOnly
+    )
+    begin {
+        Write-Verbose "Merge-Hashtable begin: ====================================================="
+        Write-Verbose "Destination: $($Destination | ConvertTo-Json -Depth 100)"
+        Write-Verbose "AddOnly: $($AddOnly)"
+        $result = $Destination
+    }
+    process {
+        Write-Verbose "Merge-Hashtable process: ==================================================="
+        if ($_) {
+            [hashtable]$src=$_
+        } else {
+            [hashtable]$src=$Source
+        }
+        Write-Verbose "Source (src): $($src | ConvertTo-Json -Depth 100)"
+        $result = (AddHashtable -Source $src -Dest $result -Action:$AddOnly)
+        #$result += $src
+    }
+    end {
+        Write-Verbose "Merge-Hashtable end: ======================================================="
+        Write-Verbose "Result hashtable: $($result | ConvertTo-Json -Depth 100)"
+        return $result
+    }
+}
+
 ###########################################################
 ###########################################################
 ###########################################################
@@ -264,7 +374,7 @@ function Get-PathModules()
     return $result;
 }
 
-function Include-Modules() {
+function Use-Modules() {
     Param(
         [Parameter(Position=0, ValueFromPipeline=$True)]
         [string[]]$ClassNames=@(),
