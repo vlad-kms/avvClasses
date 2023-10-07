@@ -1,14 +1,18 @@
-using module '.\avvBase.ps1';
+п»ї#using module '.\avvBase.ps1';
+
+#using module "D:\Tools\~scripts.ps\avvClasses\classes\avvBase.ps1";
+#. "D:\Tools\~scripts.ps\avvClasses\classes\avvBase.ps1";
+
 <#
-# Класс FileCFG базовый класс. Сам по себе бесполезен.
-# Может считывать, записывать, добавлять ключи, значения, секции.
-# Для записи требуется сначала установить свойство isReadOnly в $False.
-# Класс IniCFG для работы с файлами .ini. Содержимое файла загружается в Hashtable.
-# Секции это ключи первого уровня, создаются из имен секций. Значения параметров секции
-# пишутся как ключи и значения в Hashtable. Если имя файла переданное в конструктор = '_empty_',
-# то инициализацию из файла пропустить, т.е. CFG после конструктора будет @{}
-# Например:
-ФАЙЛ ini
+# РљР»Р°СЃСЃ FileCFG Р±Р°Р·РѕРІС‹Р№ РєР»Р°СЃСЃ. РЎР°Рј РїРѕ СЃРµР±Рµ Р±РµСЃРїРѕР»РµР·РµРЅ.
+# РњРѕР¶РµС‚ СЃС‡РёС‚С‹РІР°С‚СЊ, Р·Р°РїРёСЃС‹РІР°С‚СЊ, РґРѕР±Р°РІР»СЏС‚СЊ РєР»СЋС‡Рё, Р·РЅР°С‡РµРЅРёСЏ, СЃРµРєС†РёРё.
+# Р”Р»СЏ Р·Р°РїРёСЃРё С‚СЂРµР±СѓРµС‚СЃСЏ СЃРЅР°С‡Р°Р»Р° СѓСЃС‚Р°РЅРѕРІРёС‚СЊ СЃРІРѕР№СЃС‚РІРѕ isReadOnly РІ $False.
+# РљР»Р°СЃСЃ IniCFG РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ С„Р°Р№Р»Р°РјРё .ini. РЎРѕРґРµСЂР¶РёРјРѕРµ С„Р°Р№Р»Р° Р·Р°РіСЂСѓР¶Р°РµС‚СЃСЏ РІ Hashtable.
+# РЎРµРєС†РёРё СЌС‚Рѕ РєР»СЋС‡Рё РїРµСЂРІРѕРіРѕ СѓСЂРѕРІРЅСЏ, СЃРѕР·РґР°СЋС‚СЃСЏ РёР· РёРјРµРЅ СЃРµРєС†РёР№. Р—РЅР°С‡РµРЅРёСЏ РїР°СЂР°РјРµС‚СЂРѕРІ СЃРµРєС†РёРё
+# РїРёС€СѓС‚СЃСЏ РєР°Рє РєР»СЋС‡Рё Рё Р·РЅР°С‡РµРЅРёСЏ РІ Hashtable. Р•СЃР»Рё РёРјСЏ С„Р°Р№Р»Р° РїРµСЂРµРґР°РЅРЅРѕРµ РІ РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ = '_empty_',
+# С‚Рѕ РёРЅРёС†РёР°Р»РёР·Р°С†РёСЋ РёР· С„Р°Р№Р»Р° РїСЂРѕРїСѓСЃС‚РёС‚СЊ, С‚.Рµ. CFG РїРѕСЃР»Рµ РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂР° Р±СѓРґРµС‚ @{}
+# РќР°РїСЂРёРјРµСЂ:
+Р¤РђР™Р› ini
     [default]
     Token=<KEY API TELEGRAM>0
     access_token=789
@@ -27,7 +31,7 @@ using module '.\avvBase.ps1';
     par1="$($ExtParams.Token)"
     par1="$ExtParams"
     ke="1+3"
-    kf=$(2+1*3) - будет подсчитано арифметическое выражение
+    kf=$(2+1*3) - Р±СѓРґРµС‚ РїРѕРґСЃС‡РёС‚Р°РЅРѕ Р°СЂРёС„РјРµС‚РёС‡РµСЃРєРѕРµ РІС‹СЂР°Р¶РµРЅРёРµ
     ;Token=_empty_
 
     [dns_cli1]
@@ -48,58 +52,58 @@ using module '.\avvBase.ps1';
     ClinicVersion                  2
     test                           test
     test1                          test1
-# Если имеется секция [default], то значение ключа формируется по правилам
-# Если в секции нет ключа, а в [default] есть, значение берется из [default].
-# Если в секции есть ключ, неважно есть или нет в [default], значение берется из секции,
-# кроме случая, если значение в секции = '_empty_', значение берется из [default].
-# Если имеется секция [_always_], то значение ключа формируется по правилам:
-# Применяются они после [default] и заменяют все что было до этого, т.е.
-# секция [_always_] переопределяет все остальные параметры.
-# В отличии от классического ini, есть поддержка вложенных Hashtable'ов.
-# Есть конструктор для создания из Hashtable. Входной объект добавляется через (+) в CFG.
-# В файле ini могут использоваться переменные. Примеры в секции [dns_cli] выше. Переменные
-# высчитываются при помощи Invoke-Expression.
-# Здесь и можно использовать вложенность в полной мере.
-# Поле ErrorAsException если True, то при чтении если нет ключа, ошибка преобразования в тип и т.д.
-# преобразуется в Exception, иначе возвращается пустая строка.
-# Функции:
-#   [Hashtable]readSection([string]$section) - считать секцию.
-#       Выход: @{
-#                   code: 0 - секция есть и ее считали
-#                   result: - считанная секция, т.е. ее ключи и значения
+# Р•СЃР»Рё РёРјРµРµС‚СЃСЏ СЃРµРєС†РёСЏ [default], С‚Рѕ Р·РЅР°С‡РµРЅРёРµ РєР»СЋС‡Р° С„РѕСЂРјРёСЂСѓРµС‚СЃСЏ РїРѕ РїСЂР°РІРёР»Р°Рј
+# Р•СЃР»Рё РІ СЃРµРєС†РёРё РЅРµС‚ РєР»СЋС‡Р°, Р° РІ [default] РµСЃС‚СЊ, Р·РЅР°С‡РµРЅРёРµ Р±РµСЂРµС‚СЃСЏ РёР· [default].
+# Р•СЃР»Рё РІ СЃРµРєС†РёРё РµСЃС‚СЊ РєР»СЋС‡, РЅРµРІР°Р¶РЅРѕ РµСЃС‚СЊ РёР»Рё РЅРµС‚ РІ [default], Р·РЅР°С‡РµРЅРёРµ Р±РµСЂРµС‚СЃСЏ РёР· СЃРµРєС†РёРё,
+# РєСЂРѕРјРµ СЃР»СѓС‡Р°СЏ, РµСЃР»Рё Р·РЅР°С‡РµРЅРёРµ РІ СЃРµРєС†РёРё = '_empty_', Р·РЅР°С‡РµРЅРёРµ Р±РµСЂРµС‚СЃСЏ РёР· [default].
+# Р•СЃР»Рё РёРјРµРµС‚СЃСЏ СЃРµРєС†РёСЏ [_always_], С‚Рѕ Р·РЅР°С‡РµРЅРёРµ РєР»СЋС‡Р° С„РѕСЂРјРёСЂСѓРµС‚СЃСЏ РїРѕ РїСЂР°РІРёР»Р°Рј:
+# РџСЂРёРјРµРЅСЏСЋС‚СЃСЏ РѕРЅРё РїРѕСЃР»Рµ [default] Рё Р·Р°РјРµРЅСЏСЋС‚ РІСЃРµ С‡С‚Рѕ Р±С‹Р»Рѕ РґРѕ СЌС‚РѕРіРѕ, С‚.Рµ.
+# СЃРµРєС†РёСЏ [_always_] РїРµСЂРµРѕРїСЂРµРґРµР»СЏРµС‚ РІСЃРµ РѕСЃС‚Р°Р»СЊРЅС‹Рµ РїР°СЂР°РјРµС‚СЂС‹.
+# Р’ РѕС‚Р»РёС‡РёРё РѕС‚ РєР»Р°СЃСЃРёС‡РµСЃРєРѕРіРѕ ini, РµСЃС‚СЊ РїРѕРґРґРµСЂР¶РєР° РІР»РѕР¶РµРЅРЅС‹С… Hashtable'РѕРІ.
+# Р•СЃС‚СЊ РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РёР· Hashtable. Р’С…РѕРґРЅРѕР№ РѕР±СЉРµРєС‚ РґРѕР±Р°РІР»СЏРµС‚СЃСЏ С‡РµСЂРµР· (+) РІ CFG.
+# Р’ С„Р°Р№Р»Рµ ini РјРѕРіСѓС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ РїРµСЂРµРјРµРЅРЅС‹Рµ. РџСЂРёРјРµСЂС‹ РІ СЃРµРєС†РёРё [dns_cli] РІС‹С€Рµ. РџРµСЂРµРјРµРЅРЅС‹Рµ
+# РІС‹СЃС‡РёС‚С‹РІР°СЋС‚СЃСЏ РїСЂРё РїРѕРјРѕС‰Рё Invoke-Expression.
+# Р—РґРµСЃСЊ Рё РјРѕР¶РЅРѕ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ РІР»РѕР¶РµРЅРЅРѕСЃС‚СЊ РІ РїРѕР»РЅРѕР№ РјРµСЂРµ.
+# РџРѕР»Рµ ErrorAsException РµСЃР»Рё True, С‚Рѕ РїСЂРё С‡С‚РµРЅРёРё РµСЃР»Рё РЅРµС‚ РєР»СЋС‡Р°, РѕС€РёР±РєР° РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёСЏ РІ С‚РёРї Рё С‚.Рґ.
+# РїСЂРµРѕР±СЂР°Р·СѓРµС‚СЃСЏ РІ Exception, РёРЅР°С‡Рµ РІРѕР·РІСЂР°С‰Р°РµС‚СЃСЏ РїСѓСЃС‚Р°СЏ СЃС‚СЂРѕРєР°.
+# Р¤СѓРЅРєС†РёРё:
+#   [Hashtable]readSection([string]$section) - СЃС‡РёС‚Р°С‚СЊ СЃРµРєС†РёСЋ.
+#       Р’С‹С…РѕРґ: @{
+#                   code: 0 - СЃРµРєС†РёСЏ РµСЃС‚СЊ Рё РµРµ СЃС‡РёС‚Р°Р»Рё
+#                   result: - СЃС‡РёС‚Р°РЅРЅР°СЏ СЃРµРєС†РёСЏ, С‚.Рµ. РµРµ РєР»СЋС‡Рё Рё Р·РЅР°С‡РµРЅРёСЏ
 #               }
-# Следующие методы считывают ключ в заданной секции. get<Type> работают через getKeyValue,
-# просто преобразуя результат в требуемый тип
+# РЎР»РµРґСѓСЋС‰РёРµ РјРµС‚РѕРґС‹ СЃС‡РёС‚С‹РІР°СЋС‚ РєР»СЋС‡ РІ Р·Р°РґР°РЅРЅРѕР№ СЃРµРєС†РёРё. get<Type> СЂР°Р±РѕС‚Р°СЋС‚ С‡РµСЂРµР· getKeyValue,
+# РїСЂРѕСЃС‚Рѕ РїСЂРµРѕР±СЂР°Р·СѓСЏ СЂРµР·СѓР»СЊС‚Р°С‚ РІ С‚СЂРµР±СѓРµРјС‹Р№ С‚РёРї
 #   [Object] hidden getKeyValue([string]$path, [string]$key)
 #   [bool] getBool([string]$path, [string]$key){
 #   [string] getString([string]$path, [string]$key){
 #   [Int] getInt([string]$path, [string]$key){
 #   [long] getLong([string]$path, [string]$key){
 #   saveToFile([string]$filename, [bool]$isOverwrite)
-#                       - записать в файл INI $filename секцию CFG. Записывается только первый уровень,
-#                         не пишутся ключи, значением которых является [Hashtable]
-#                         $isOverwrite показывает перезаписывать файл или нет
-#   saveToFile()          - то же что и выше, но записывается в файл $this.filename. По умолчанию $isOverwrite=$False
+#                       - Р·Р°РїРёСЃР°С‚СЊ РІ С„Р°Р№Р» INI $filename СЃРµРєС†РёСЋ CFG. Р—Р°РїРёСЃС‹РІР°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РїРµСЂРІС‹Р№ СѓСЂРѕРІРµРЅСЊ,
+#                         РЅРµ РїРёС€СѓС‚СЃСЏ РєР»СЋС‡Рё, Р·РЅР°С‡РµРЅРёРµРј РєРѕС‚РѕСЂС‹С… СЏРІР»СЏРµС‚СЃСЏ [Hashtable]
+#                         $isOverwrite РїРѕРєР°Р·С‹РІР°РµС‚ РїРµСЂРµР·Р°РїРёСЃС‹РІР°С‚СЊ С„Р°Р№Р» РёР»Рё РЅРµС‚
+#   saveToFile()          - С‚Рѕ Р¶Рµ С‡С‚Рѕ Рё РІС‹С€Рµ, РЅРѕ Р·Р°РїРёСЃС‹РІР°РµС‚СЃСЏ РІ С„Р°Р№Р» $this.filename. РџРѕ СѓРјРѕР»С‡Р°РЅРёСЋ $isOverwrite=$False
 #   saveToFile([bool]$isOverwrite)
 #   [bool] hidden setKeyValue([string]$path, [string]$key, [Object]$value){
-#                       - записать значение в ключ секции, значение ключа по пути.
-#                         Если ключ = '', то метод проверяет есть ли путь, и создает его если его нет.
+#                       - Р·Р°РїРёСЃР°С‚СЊ Р·РЅР°С‡РµРЅРёРµ РІ РєР»СЋС‡ СЃРµРєС†РёРё, Р·РЅР°С‡РµРЅРёРµ РєР»СЋС‡Р° РїРѕ РїСѓС‚Рё.
+#                         Р•СЃР»Рё РєР»СЋС‡ = '', С‚Рѕ РјРµС‚РѕРґ РїСЂРѕРІРµСЂСЏРµС‚ РµСЃС‚СЊ Р»Рё РїСѓС‚СЊ, Рё СЃРѕР·РґР°РµС‚ РµРіРѕ РµСЃР»Рё РµРіРѕ РЅРµС‚.
 #
 # ****** class JsonCFG  ************************************
-# Все тоже самое, разница в файлах с которым работает класс, а именно Json.
-# Остальное аналогично, толдько вложенность многоуровневая из-за структуры файлов.
+# Р’СЃРµ С‚РѕР¶Рµ СЃР°РјРѕРµ, СЂР°Р·РЅРёС†Р° РІ С„Р°Р№Р»Р°С… СЃ РєРѕС‚РѕСЂС‹Рј СЂР°Р±РѕС‚Р°РµС‚ РєР»Р°СЃСЃ, Р° РёРјРµРЅРЅРѕ Json.
+# РћСЃС‚Р°Р»СЊРЅРѕРµ Р°РЅР°Р»РѕРіРёС‡РЅРѕ, С‚РѕР»РґСЊРєРѕ РІР»РѕР¶РµРЅРЅРѕСЃС‚СЊ РјРЅРѕРіРѕСѓСЂРѕРІРЅРµРІР°СЏ РёР·-Р·Р° СЃС‚СЂСѓРєС‚СѓСЂС‹ С„Р°Р№Р»РѕРІ.
 #>
 
 <######################################
     [FileCFG]
-Правила именования Java
+РџСЂР°РІРёР»Р° РёРјРµРЅРѕРІР°РЅРёСЏ Java
 #######################################>
 #. .\avvBase.ps1
 
 Class FileCFG : avvBase {
     [string] $filename      ='';
     [Hashtable] $CFG        =[ordered]@{};
-	[bool] $errorAsException=$false;
+    [bool] $errorAsException=$false;
     [bool] $isReadOnly      =$true;
     [bool] $isOverwrite     =$false;
     [bool] $isDebug         =$false;
@@ -114,7 +118,7 @@ Class FileCFG : avvBase {
     }
     FileCFG([bool]$EaE){
         $this.filename=$PSCommandPath + $this.getExtensionForClass();
-		#$this.errorAsException=$EaE
+        #$this.errorAsException=$EaE
         $this.errorAsException=$EaE
         $this.initFileCFG();
     }
@@ -124,47 +128,63 @@ Class FileCFG : avvBase {
     }
     FileCFG([string]$FN, [bool]$EaE) {
         $this.filename=$FN;
-		#$this.errorAsException=$EaE
+        #$this.errorAsException=$EaE
         $this.errorAsException=$EaE
         $this.initFileCFG();
     }
 
     FileCFG([string]$FN, [bool]$EaE, [Hashtable]$CFG) {
-        $FN = '_empty_';
-        $this.filename = $FN;
+        #$FN = '_empty_';
+        if ($null -ne $FN) {
+            $this.filename = $FN;
+        } else {
+            $FN = '_empty_';
+        }
         $this.errorAsException = $EaE
         $this.initFileCFG();
         $this.CFG += $CFG;
     }
-    FileCFG([Hashtable]$CFG) : base ($CFG){
-        # входящий hashtable:
+
+    #FileCFG([Hashtable]$CFG) : base ($CFG){
+    FileCFG([Hashtable]$CFG) : base (){
+        # РІС…РѕРґСЏС‰РёР№ hashtable:
         #   @{
-        #       '_obj_'           =@{} - значения для свойств объекта базового класса
-        #       '_obj_add_'       =@{} - значения для свойств объекта базового класса
-        #       '_obj_add_value_' =@{} - значения для свойств объекта базового класса
-        #       '_cfg_'=@{}     - значение для поля CFG, заменяют считанные их файла
-        #       '_cfg_add'=@{}  - значение для поля CFG, добавляются к считанным из файла
+        #       '_obj_'           =@{} - Р·РЅР°С‡РµРЅРёСЏ РґР»СЏ СЃРІРѕР№СЃС‚РІ РѕР±СЉРµРєС‚Р° Р±Р°Р·РѕРІРѕРіРѕ РєР»Р°СЃСЃР°
+        #       '_obj_add_'       =@{} - Р·РЅР°С‡РµРЅРёСЏ РґР»СЏ СЃРІРѕР№СЃС‚РІ РѕР±СЉРµРєС‚Р° Р±Р°Р·РѕРІРѕРіРѕ РєР»Р°СЃСЃР°
+        #       '_obj_add_value_' =@{} - Р·РЅР°С‡РµРЅРёСЏ РґР»СЏ СЃРІРѕР№СЃС‚РІ РѕР±СЉРµРєС‚Р° Р±Р°Р·РѕРІРѕРіРѕ РєР»Р°СЃСЃР°
+        #       'cfg'             =@{} - Р·РЅР°С‡РµРЅРёРµ РґР»СЏ РїРѕР»СЏ CFG, Р·Р°РјРµРЅСЏСЋС‚ СЃС‡РёС‚Р°РЅРЅС‹Рµ РёР· С„Р°Р№Р»Р°
+        #       'cfg_add'         =@{} - Р·РЅР°С‡РµРЅРёРµ РґР»СЏ РїРѕР»СЏ CFG, РґРѕР±Р°РІР»СЏСЋС‚СЃСЏ Рє СЃС‡РёС‚Р°РЅРЅС‹Рј РёР· С„Р°Р№Р»Р°
         #   }
-        if (! $this.filename)
-        {
-            $this.filename = '_empty_';
+        $this.filename = '_empty_';
+
+        if ( $CFG.ContainsKey('Filename') -and ($CFG.Filename) ) {
+            $this.filename = $CFG.Filename;
         }
+        $objKey='_obj_'
+        if ( $CFG.ContainsKey($objKey)  -and $CFG.$objKey.ContainsKey("filename") -and $CFG.$objKey.filename ) {
+            $this.filename = $CFG.$objKey.filename;
+        }
+        if ( $CFG.ContainsKey($objKey)  -and $CFG.$objKey.ContainsKey("errorAsException") -and $CFG.$objKey.errorAsException ) {
+            $this.errorAsException = $CFG.$objKey.errorAsException;
+        }
+
+        $objKey='_new_'
+        if ( $CFG.ContainsKey($objKey)  -and $CFG.$objKey.ContainsKey("filename") -and $CFG.$objKey.filename ) {
+            $this.filename = $CFG.$objKey.filename;
+        }
+        if ( $CFG.ContainsKey($objKey)  -and $CFG.$objKey.ContainsKey("errorAsException") -and $CFG.$objKey.errorAsException ) {
+            $this.errorAsException = $CFG.$objKey.errorAsException;
+        }
+
+        # СЃС‡РёС‚Р°С‚СЊ РґР°РЅРЅС‹Рµ РёР· С„Р°Р№Р»Р°
         $this.initFileCFG();
+        # РґРѕР±Р°РІРёС‚СЊ РґР°РЅРЅС‹Рµ РёР· hashtable CFG
+        $this.initFromHashtable($CFG);
+        
         $keyCurrent='cfg';
-        if ($CFG.Contains($keyCurrent) -and
-                ($null -ne $CFG.$keyCurrent) -and
-                ($CFG.$keyCurrent -is [Hashtable])
-            )
+        if ($CFG.Contains($keyCurrent) -and $this.isHashtable($CFG.$keyCurrent) )
         {
-            $this.CFG = $CFG.$keyCurrent;
-        }
-        $keyCurrent='cfg_add';
-        if ($CFG.Contains($keyCurrent) -and
-                ($null -ne $CFG.$keyCurrent) -and
-                ($CFG.$keyCurrent -is [Hashtable])
-            )
-        {
-            $this.CFG += $CFG.$keyCurrent;
+            $this.addHashtable($CFG.$keyCurrent, $this.CFG, [FlagAddHashtable]::Merge);
         }
     }
 
@@ -189,12 +209,13 @@ Class FileCFG : avvBase {
         return $res;
     }
     <#
-	#	Инициализация. Проверить существование файла, считать данные из
-	#	файла в hashtable. Если имя файла = '_empty_', то пропуск метода.
-	#	Exception, если не считали, или объект пустой
+    #   РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ. РџСЂРѕРІРµСЂРёС‚СЊ СЃСѓС‰РµСЃС‚РІРѕРІР°РЅРёРµ С„Р°Р№Р»Р°, СЃС‡РёС‚Р°С‚СЊ РґР°РЅРЅС‹Рµ РёР·
+    #   С„Р°Р№Р»Р° РІ hashtable. Р•СЃР»Рё РёРјСЏ С„Р°Р№Р»Р° = '_empty_', С‚Рѕ РїСЂРѕРїСѓСЃРє РјРµС‚РѕРґР°.
+    #   Exception, РµСЃР»Рё РЅРµ СЃС‡РёС‚Р°Р»Рё, РёР»Рё РѕР±СЉРµРєС‚ РїСѓСЃС‚РѕР№
     #>
     [bool]initFileCFG() {
-        $result=$false;
+        $result=0;
+        #if (!$this.filename) {$this.filename = '_EMPTY_'}
         if ($this.filename.ToUpper() -ne '_EMPTY_' )
         {
             # $this.filename != '_empty_';
@@ -203,7 +224,7 @@ Class FileCFG : avvBase {
             $isFile = Test-Path -Path "$($this.filename)" -PathType Leaf;
             #$this.isExcept(!$isFile, $true, "Not exists file configuration: $($this.filename)");
             $this.isExcept(!$isFile, "Not exists file configuration: $($this.filename)");
-	        $this.CFG=$this.importInifile($this.filename);
+            $this.CFG=$this.importInifile($this.filename);
             $result=$this.CFG.Count;
             #$this.isExcept(!$result, "Error parsing file CFG: $($this.filename)")
         }
@@ -230,20 +251,20 @@ Class FileCFG : avvBase {
         } else { return ""; }
     }
 
-	<######################### readSection ############################################
-    #   Считать секцию
-    #   Возврат:
+    <######################### readSection ############################################
+    #   РЎС‡РёС‚Р°С‚СЊ СЃРµРєС†РёСЋ
+    #   Р’РѕР·РІСЂР°С‚:
     #       [Hashtable]@{
-    #           code:   0 - секция есть и ее считали
-    #                   1 - нет пути, т.е. какой-то элемента в section
-    #                   2 - есть путь, но какой-то элемент в пути не
-    #                       является [Hashtable]п
+    #           code:   0 - СЃРµРєС†РёСЏ РµСЃС‚СЊ Рё РµРµ СЃС‡РёС‚Р°Р»Рё
+    #                   1 - РЅРµС‚ РїСѓС‚Рё, С‚.Рµ. РєР°РєРѕР№-С‚Рѕ СЌР»РµРјРµРЅС‚Р° РІ section
+    #                   2 - РµСЃС‚СЊ РїСѓС‚СЊ, РЅРѕ РєР°РєРѕР№-С‚Рѕ СЌР»РµРјРµРЅС‚ РІ РїСѓС‚Рё РЅРµ
+    #                       СЏРІР»СЏРµС‚СЃСЏ [Hashtable]Рї
     #                   3 -
-    #           result:   - считанная секция, т.е. ее ключи и значения
-    #                       Список ключей и значений из секции.
+    #           result:   - СЃС‡РёС‚Р°РЅРЅР°СЏ СЃРµРєС†РёСЏ, С‚.Рµ. РµРµ РєР»СЋС‡Рё Рё Р·РЅР°С‡РµРЅРёСЏ
+    #                       РЎРїРёСЃРѕРє РєР»СЋС‡РµР№ Рё Р·РЅР°С‡РµРЅРёР№ РёР· СЃРµРєС†РёРё.
     #       }
-    #       Если секция не существует, то в зависимости от errorAsException,
-    #       либо пустой список, либо формируется Exception
+    #       Р•СЃР»Рё СЃРµРєС†РёСЏ РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚, С‚Рѕ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ errorAsException,
+    #       Р»РёР±Рѕ РїСѓСЃС‚РѕР№ СЃРїРёСЃРѕРє, Р»РёР±Рѕ С„РѕСЂРјРёСЂСѓРµС‚СЃСЏ Exception
     #########################################################################>
     [String]
     normalizeSection ([String]$section)
@@ -251,7 +272,8 @@ Class FileCFG : avvBase {
         $result = $section.trim();
         if (!$result) { $result = '.'; }
         $isRoot = $false;
-        while ( !$result -or ($result.Substring(0, 1) -eq '\') -or ($result.Substring(0, 1) -eq '/'))
+        #while ( !$result -or ($result.Substring(0, 1) -eq '\') -or ($result.Substring(0, 1) -eq '/'))
+        while ( !$result -or $result.StartsWith('\') -or $result.StartsWith('/'))
         {
             $isRoot = $true;
             $result = $result.Substring(1, $result.Length -1);
@@ -260,7 +282,8 @@ Class FileCFG : avvBase {
         {
             $result = $this.currentSection + '.' + $result;
         }
-        while (($result.Substring(0, 1) -eq '\') -or ($result.Substring(0, 1) -eq '/'))
+        #while (($result.Substring(0, 1) -eq '\') -or ($result.Substring(0, 1) -eq '/'))
+        while ( $result.StartsWith('\') -or $result.StartsWith('/'))
         {
             $result = $result.Substring(1, $result.Length -1);
         }
@@ -268,14 +291,14 @@ Class FileCFG : avvBase {
     }
 
     [Hashtable]readSection([string]$section) {
-		$result = @{};
+        $result = @{};
         $code = 0;
-        # массив из строки 'sec1.sec2.sec3...
+        # РјР°СЃСЃРёРІ РёР· СЃС‚СЂРѕРєРё 'sec1.sec2.sec3...
         $section = $this.normalizeSection($section);
         $arrSections = $section.Split('.', [StringSplitOptions]::RemoveEmptyEntries);
         $path = $this.CFG;
-        # проверить для каждого из массива, что существует ключ и его значение есть Hashtable:
-        # как-то так
+        # РїСЂРѕРІРµСЂРёС‚СЊ РґР»СЏ РєР°Р¶РґРѕРіРѕ РёР· РјР°СЃСЃРёРІР°, С‡С‚Рѕ СЃСѓС‰РµСЃС‚РІСѓРµС‚ РєР»СЋС‡ Рё РµРіРѕ Р·РЅР°С‡РµРЅРёРµ РµСЃС‚СЊ Hashtable:
+        # РєР°Рє-С‚Рѕ С‚Р°Рє
         # sec1=@{
         #           sec2=@{
         #                   sec3=@{
@@ -298,38 +321,90 @@ Class FileCFG : avvBase {
                 }
                 else
                 {
-                    # путь есть, но элемент не [Hashtable]
+                    # РїСѓС‚СЊ РµСЃС‚СЊ, РЅРѕ СЌР»РµРјРµРЅС‚ РЅРµ [Hashtable]
                     $path = @{};
                     $code = 2;
                 }
             }
             else
             {
-                # нет такого пути
+                # РЅРµС‚ С‚Р°РєРѕРіРѕ РїСѓС‚Рё
                 $path = @{};
                 $code = 1;
             }
         });
-        # ошибка и пустой Hashtable, если считанное значение не Hashtable.
-        # Т.е. убрали считывание ключа, оставили только секцию
+        # РѕС€РёР±РєР° Рё РїСѓСЃС‚РѕР№ Hashtable, РµСЃР»Рё СЃС‡РёС‚Р°РЅРЅРѕРµ Р·РЅР°С‡РµРЅРёРµ РЅРµ Hashtable.
+        # Рў.Рµ. СѓР±СЂР°Р»Рё СЃС‡РёС‚С‹РІР°РЅРёРµ РєР»СЋС‡Р°, РѕСЃС‚Р°РІРёР»Рё С‚РѕР»СЊРєРѕ СЃРµРєС†РёСЋ
         #if (!($path -is [Hashtable]) -and
         #        !($path -is [System.Collections.Specialized.OrderedDictionary])
         #    )
         if ( !$this.isHashtable($path) )
         {
-            # последний элемент в пути не является [Hashtable]
+            # РїРѕСЃР»РµРґРЅРёР№ СЌР»РµРјРµРЅС‚ РІ РїСѓС‚Рё РЅРµ СЏРІР»СЏРµС‚СЃСЏ [Hashtable]
             $path = $null;
             $code = 2;
         }
         if ( $code -ne 0 ) { $path = $null; }
-        # Если в секции нет значений и $this.ErrorAsException и $code <> 0, то породить Exception
+        # Р•СЃР»Рё РІ СЃРµРєС†РёРё РЅРµС‚ Р·РЅР°С‡РµРЅРёР№ Рё $this.ErrorAsException Рё $code <> 0, С‚Рѕ РїРѕСЂРѕРґРёС‚СЊ Exception
         !$this.isExcept( ($path.Keys.Count -eq 0) -and ($code -ne 0), "Not found section name $($section) or is not Section type");
         $result = @{
             'code'=$code;
             'result'=$path;
         }
-		return $result;
-	}
+        # СЃРµРєС†РёСЏ СЃ Р·Р°РїРѕР»РЅРµРЅРЅС‹РјРё Р·РЅР°С‡РµРЅРёСЏРјРё СЃ СѓС‡РµС‚РѕРј СЃРµРєС†РёР№ [default] [_always_]
+        while ($section.StartsWith('.')) { $section=$section.Substring(1, $section.Length-1) }
+        $pathDefs=$this.fillValues($path, $section)
+        $result.Add('resultDefs', $pathDefs)
+        <#
+        $pathDefs=[ordered]@{};
+        while ($section.StartsWith('.')) { $section=$section.Substring(1, $section.Length-1) }
+        $path.Keys.foreach({
+            $pathDefs.Add($_, $this.getKeyValueUseDefaultAlways($path, $section, $_))
+        });
+        $result.Add('resultDefs', $pathDefs)
+        #>
+
+
+        <# РќР• РќРђР”Рћ
+        # СЃРµРєС†РёСЏ СЃ Р·Р°РїРѕР»РЅРµРЅРЅС‹РјРё Р·РЅР°С‡РµРЅРёСЏРјРё СЃ СѓС‡РµС‚РѕРј СЃРµРєС†РёР№ [default] [_always_]
+        # Рё СЃ РґРѕР±Р°РІР»РµРЅРЅС‹РјРё РєР»СЋС‡Р°РјРё РёР· СЃРµРєС†РёРё default РІРёРґР° section_key, section.key,
+        # РєРѕС‚РѕСЂС‹С… РЅРµС‚ РІ СЃРµРєС†РёРё section
+        $pathDefsOnly=[ordered]@{};
+
+        $result.Add('resultDefsOnly', $pathDefsOnly)
+        #>
+        return $result;
+    }
+    
+    [hashtable] fillValues ([Hashtable]$path, [String]$section) {
+        $result=[ordered]@{};
+        $path.Keys.foreach({
+            if ($this.isHashtable($path.$_)) {
+                if ($section) {
+                    $s="$($section).$($_)"
+                } else {
+                    $s="$($_)"
+                }
+                $result.Add($_, $this.fillValues($path.$_, $s))
+            } else {
+                $result.Add($_, $this.getKeyValueUseDefaultAlways($path, $section, $_))
+            }
+        });
+        
+        return $result
+    }
+    
+    [hashtable] getSectionValues([String]$path, $section)
+    {
+        if ($section) { $path += ".$($section)"}
+        return $this.readSection($path);
+    }
+
+    [hashtable] getSectionValues([String]$path)
+    {
+        return $this.getSectionValues($path, '');
+    }
+
     [hashtable] getSection([String]$path, $section)
     {
         if ($section) { $path += ".$($section)"}
@@ -337,64 +412,78 @@ Class FileCFG : avvBase {
         if ($res.code -eq 0) { return $res.result; }
         else { return $null; }
     }
+   
     [hashtable] getSection([String]$path)
     {
         return $this.getSection($path, '');
     }
+<#
+    [hashtable] getSectionProcessedKeys([String]$Path, $section)
+    {
+        result= @{};
+        $readSection=$this.getSection($path, $section);
 
+        return $result
+    }
+
+    [hashtable] getSectionProcessedKeys([String]$Path)
+    {
+        return $this.getSectionProcessedKeys($path, '');
+    }
+#>
     [hashtable] addSection([string]$path, [string]$section){
         $result = $null;
         if ($this.isReadOnly) { return $result; }
         $res = $true;
-        # проверить каждый элемент в path и
-        # если он есть и не hashtable
-        #   то прервать с ошибкой
-        # если он есть и hashtable
-        #   то перейти к следующему элементу
-        # если его нет
-        #   то создать и перейти к следующему, если при создании не было ошибок
+        # РїСЂРѕРІРµСЂРёС‚СЊ РєР°Р¶РґС‹Р№ СЌР»РµРјРµРЅС‚ РІ path Рё
+        # РµСЃР»Рё РѕРЅ РµСЃС‚СЊ Рё РЅРµ hashtable
+        #   С‚Рѕ РїСЂРµСЂРІР°С‚СЊ СЃ РѕС€РёР±РєРѕР№
+        # РµСЃР»Рё РѕРЅ РµСЃС‚СЊ Рё hashtable
+        #   С‚Рѕ РїРµСЂРµР№С‚Рё Рє СЃР»РµРґСѓСЋС‰РµРјСѓ СЌР»РµРјРµРЅС‚Сѓ
+        # РµСЃР»Рё РµРіРѕ РЅРµС‚
+        #   С‚Рѕ СЃРѕР·РґР°С‚СЊ Рё РїРµСЂРµР№С‚Рё Рє СЃР»РµРґСѓСЋС‰РµРјСѓ, РµСЃР»Рё РїСЂРё СЃРѕР·РґР°РЅРёРё РЅРµ Р±С‹Р»Рѕ РѕС€РёР±РѕРє
         $path = $this.normalizeSection($path);
         $arrPath = $path.Split('.', [StringSplitOptions]::RemoveEmptyEntries);
         $currentPath = $this.CFG;
         $arrPath.foreach({
             if ( $currentPath.Contains($_) -and $this.isHashtable($currentPath["$_"]) )
             {
-                # взять следующий элемент пути
+                # РІР·СЏС‚СЊ СЃР»РµРґСѓСЋС‰РёР№ СЌР»РµРјРµРЅС‚ РїСѓС‚Рё
                 $currentPath = $currentPath["$_"];
                 $res = $true;
             }
             elseif (!$currentPath.Contains($_))
             {
-                # создать новый ключ типа hashtable
+                # СЃРѕР·РґР°С‚СЊ РЅРѕРІС‹Р№ РєР»СЋС‡ С‚РёРїР° hashtable
                 $currentPath.add($_, @{});
-                # взять следующий элемент пути
+                # РІР·СЏС‚СЊ СЃР»РµРґСѓСЋС‰РёР№ СЌР»РµРјРµРЅС‚ РїСѓС‚Рё
                 $currentPath = $currentPath["$_"];
                 $res = $true;
             }
             elseif ( $currentPath.Contains($_) -and !$this.isHashtable($currentPath["$_"]) )
             {
                 $res = $False;
-                $this.isExcept(!$result, "Невозможно создать секцию по данному пути $($path). Уже есть ключ с таким именем.");
+                $this.isExcept(!$result, "РќРµРІРѕР·РјРѕР¶РЅРѕ СЃРѕР·РґР°С‚СЊ СЃРµРєС†РёСЋ РїРѕ РґР°РЅРЅРѕРјСѓ РїСѓС‚Рё $($path). РЈР¶Рµ РµСЃС‚СЊ РєР»СЋС‡ СЃ С‚Р°РєРёРј РёРјРµРЅРµРј.");
             }
             else
             {
                 $res = $False;
-                $this.isExcept(!$result, "неопределенная ошибка при создании секции по данному пути $($path).");
+                $this.isExcept(!$result, "РЅРµРѕРїСЂРµРґРµР»РµРЅРЅР°СЏ РѕС€РёР±РєР° РїСЂРё СЃРѕР·РґР°РЅРёРё СЃРµРєС†РёРё РїРѕ РґР°РЅРЅРѕРјСѓ РїСѓС‚Рё $($path).");
             }
         })
-        # $result= $True, если путь подходит для создания новой секции,
+        # $result= $True, РµСЃР»Рё РїСѓС‚СЊ РїРѕРґС…РѕРґРёС‚ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РЅРѕРІРѕР№ СЃРµРєС†РёРё,
         if ($res)
         {
-            # проверить нет ли ключа в данной секции с таким именем $section
-            # если нет, то создать новую секцию $section,
-            # иначе Exception
+            # РїСЂРѕРІРµСЂРёС‚СЊ РЅРµС‚ Р»Рё РєР»СЋС‡Р° РІ РґР°РЅРЅРѕР№ СЃРµРєС†РёРё СЃ С‚Р°РєРёРј РёРјРµРЅРµРј $section
+            # РµСЃР»Рё РЅРµС‚, С‚Рѕ СЃРѕР·РґР°С‚СЊ РЅРѕРІСѓСЋ СЃРµРєС†РёСЋ $section,
+            # РёРЅР°С‡Рµ Exception
             if (!$section)
             {
                 $result = $currentPath;
             }
             elseif ( !$currentPath.Contains($section))
             {
-                #создать секцию
+                #СЃРѕР·РґР°С‚СЊ СЃРµРєС†РёСЋ
                 $currentPath.add($section, @{});
                 $result = $currentPath["$section"];
             }
@@ -405,7 +494,7 @@ Class FileCFG : avvBase {
             else #if ( $currentPath.Contains($section) -and !$this.isHashtable($currentPath["$section"]) )
             {
                 $result = $null;
-                $this.isExcept(($null -eq $result), "Невозможно создать секцию по данному пути $($path). Уже есть ключ с таким именем.");
+                $this.isExcept(($null -eq $result), "РќРµРІРѕР·РјРѕР¶РЅРѕ СЃРѕР·РґР°С‚СЊ СЃРµРєС†РёСЋ РїРѕ РґР°РЅРЅРѕРјСѓ РїСѓС‚Рё $($path). РЈР¶Рµ РµСЃС‚СЊ РєР»СЋС‡ СЃ С‚Р°РєРёРј РёРјРµРЅРµРј.");
             }
         }
         return $result;
@@ -416,43 +505,43 @@ Class FileCFG : avvBase {
     }
 
     ########################## setKeyValue ################################
-    # Записать значение ключа по пути.
-    # Если ключ = '', то метод проверяет есть ли путь, и создает его если его нет.
-    # и возвращает True,
-    # если есть, или смог его создать только попытаться создать путь (секции), если его нет,
-    # или вернуть
-    # Вход:
-    #   $path   - секция, куда добавить key=value, или изменить его
-    #   $key    - ключ для которого менять значение
-    #   $value  - значение, которое записать по пути
-    #   о
-    # Возврат:
-    #   $true если запись удачно, иначе $false.
-    #   Если key='': $true если путь есть или смогли создать, иначе $false
+    # Р—Р°РїРёСЃР°С‚СЊ Р·РЅР°С‡РµРЅРёРµ РєР»СЋС‡Р° РїРѕ РїСѓС‚Рё.
+    # Р•СЃР»Рё РєР»СЋС‡ = '', С‚Рѕ РјРµС‚РѕРґ РїСЂРѕРІРµСЂСЏРµС‚ РµСЃС‚СЊ Р»Рё РїСѓС‚СЊ, Рё СЃРѕР·РґР°РµС‚ РµРіРѕ РµСЃР»Рё РµРіРѕ РЅРµС‚.
+    # Рё РІРѕР·РІСЂР°С‰Р°РµС‚ True,
+    # РµСЃР»Рё РµСЃС‚СЊ, РёР»Рё СЃРјРѕРі РµРіРѕ СЃРѕР·РґР°С‚СЊ С‚РѕР»СЊРєРѕ РїРѕРїС‹С‚Р°С‚СЊСЃСЏ СЃРѕР·РґР°С‚СЊ РїСѓС‚СЊ (СЃРµРєС†РёРё), РµСЃР»Рё РµРіРѕ РЅРµС‚,
+    # РёР»Рё РІРµСЂРЅСѓС‚СЊ
+    # Р’С…РѕРґ:
+    #   $path   - СЃРµРєС†РёСЏ, РєСѓРґР° РґРѕР±Р°РІРёС‚СЊ key=value, РёР»Рё РёР·РјРµРЅРёС‚СЊ РµРіРѕ
+    #   $key    - РєР»СЋС‡ РґР»СЏ РєРѕС‚РѕСЂРѕРіРѕ РјРµРЅСЏС‚СЊ Р·РЅР°С‡РµРЅРёРµ
+    #   $value  - Р·РЅР°С‡РµРЅРёРµ, РєРѕС‚РѕСЂРѕРµ Р·Р°РїРёСЃР°С‚СЊ РїРѕ РїСѓС‚Рё
+    #   Рѕ
+    # Р’РѕР·РІСЂР°С‚:
+    #   $true РµСЃР»Рё Р·Р°РїРёСЃСЊ СѓРґР°С‡РЅРѕ, РёРЅР°С‡Рµ $false.
+    #   Р•СЃР»Рё key='': $true РµСЃР»Рё РїСѓС‚СЊ РµСЃС‚СЊ РёР»Рё СЃРјРѕРіР»Рё СЃРѕР·РґР°С‚СЊ, РёРЅР°С‡Рµ $false
     ##########################################################
     [bool]  setKeyValue([string]$path, [string]$key, [Object]$value){
         $result = $false;
         $currentPath = $null;
         if (!$this.isReadOnly) {
-            # здесь только если свойство isReadOnly != $True
+            # Р·РґРµСЃСЊ С‚РѕР»СЊРєРѕ РµСЃР»Рё СЃРІРѕР№СЃС‚РІРѕ isReadOnly != $True
             $r = $this.readSection($path);
             if ($r.code -ne 0)
             {
                 if ($r.code -eq 1) {
-                    # секции нет, создать ее
+                    # СЃРµРєС†РёРё РЅРµС‚, СЃРѕР·РґР°С‚СЊ РµРµ
                     $currentPath = $this.addSection($Path, '');
                     $result = $true;
                 }
                 elseif ($r.code -eq 2)
                 {
-                    # путь есть, но это не секция, а значение
-                    $this.isExcept($true,'Нельзя записать $($key) по пути $($path), т.к. путь не является секцией');
+                    # РїСѓС‚СЊ РµСЃС‚СЊ, РЅРѕ СЌС‚Рѕ РЅРµ СЃРµРєС†РёСЏ, Р° Р·РЅР°С‡РµРЅРёРµ
+                    $this.isExcept($true,'РќРµР»СЊР·СЏ Р·Р°РїРёСЃР°С‚СЊ $($key) РїРѕ РїСѓС‚Рё $($path), С‚.Рє. РїСѓС‚СЊ РЅРµ СЏРІР»СЏРµС‚СЃСЏ СЃРµРєС†РёРµР№');
                     $result = $false;
                 }
                 else
                 {
-                    # неизвестная ошибка
-                    $this.isExcept($true, 'Неопределенная ошибка при запсис $($key) по пути $($path)');
+                    # РЅРµРёР·РІРµСЃС‚РЅР°СЏ РѕС€РёР±РєР°
+                    $this.isExcept($true, 'РќРµРѕРїСЂРµРґРµР»РµРЅРЅР°СЏ РѕС€РёР±РєР° РїСЂРё Р·Р°РїСЃРёСЃ $($key) РїРѕ РїСѓС‚Рё $($path)');
                     $result = $false;
                 }
             }
@@ -461,7 +550,7 @@ Class FileCFG : avvBase {
                 $currentPath = $r.result;
                 $result = $true;
             }
-            # записать значение, если присутствует key и он не равен ''
+            # Р·Р°РїРёСЃР°С‚СЊ Р·РЅР°С‡РµРЅРёРµ, РµСЃР»Рё РїСЂРёСЃСѓС‚СЃС‚РІСѓРµС‚ key Рё РѕРЅ РЅРµ СЂР°РІРµРЅ ''
             if ($key -and $result)
             {
                 $currentPath["$key"] = $value
@@ -479,41 +568,18 @@ Class FileCFG : avvBase {
         return $this.setKeyValue($path, $key, $value);
     }
 
-    <################################## getKeyValue ##########################################
-    Считать значение ключа, учитывая секцию default
-    Вход:
-        [string]$Path - имя секции
-        [string]$Key  - имя ключа
-    Возврат:
-        [string] Значение ключа.
-                 Если секция $Path отсутсвует, то ""
-                 Если ключ есть в требуемой секции, то возвращается значение этого ключа.
-                 Если ключа нет в требуемой секции, то возврат ключа из секции [default]
-                 Если ключа нет ни в требуемой секции, ни в секции [default], то возврат ""
-                 Если значение ключа = _empty_, то вернет пустую строку ''
-###############################################################################>
-    [Object]hidden getKeyValue([string]$path, [string]$key)
+    <# ============================================================ #>
+    [Object]hidden getKeyValueUseDefaultAlways([hashtable]$section, [string]$path, [string]$key)
     {
         $result=''
-        <#
-        $res = $this.readSection($path);
-        if ($res.code -ne 0 ) {
-            return $result
-        }
-        $section = $res.result;
-        #>
-        $section = $this.getSection($path, '');
-        if ($null -eq $section) { return $result; }
         if ($section.Contains($key) -and $section[$key])
         {
             $result=$section[$key]
         }
         else
         {
-            <#
-                Нет в секции $section ключа $Key 
-                Будем получать значение из секции default
-            #>
+            # РќРµС‚ РІ СЃРµРєС†РёРё $section РєР»СЋС‡Р° $Key 
+            # Р‘СѓРґРµРј РїРѕР»СѓС‡Р°С‚СЊ Р·РЅР°С‡РµРЅРёРµ РёР· СЃРµРєС†РёРё default
             if ($this.CFG.default.Contains($key)) {
                 $result=$this.CFG.default[$key]
             }
@@ -524,7 +590,7 @@ Class FileCFG : avvBase {
                 $result=$this.CFG.default["${Path}.${key}"]
             }
         }
-        # Обработка секции [_always_]
+        # РћР±СЂР°Р±РѕС‚РєР° СЃРµРєС†РёРё [_always_]
         if ($this.CFG.Contains('_always_') -and $this.isHashtable($this.CFG['_always_'])) {
             if ($this.CFG['_always_'].Contains($key))
             {
@@ -546,22 +612,42 @@ Class FileCFG : avvBase {
         {
             $result=''
         };
+
         return $result;
     }
-    [bool] getBool([string]$path, [string]$key)
-    {
+    <################################## getKeyValue ##########################################
+    РЎС‡РёС‚Р°С‚СЊ Р·РЅР°С‡РµРЅРёРµ РєР»СЋС‡Р°, СѓС‡РёС‚С‹РІР°СЏ СЃРµРєС†РёСЋ default
+    Р’С…РѕРґ:
+        [string]$Path - РёРјСЏ СЃРµРєС†РёРё
+        [string]$Key  - РёРјСЏ РєР»СЋС‡Р°
+    Р’РѕР·РІСЂР°С‚:
+        [string] Р—РЅР°С‡РµРЅРёРµ РєР»СЋС‡Р°.
+                 Р•СЃР»Рё СЃРµРєС†РёСЏ $Path РѕС‚СЃСѓС‚СЃС‚РІСѓРµС‚, С‚Рѕ ""
+                 Р•СЃР»Рё РєР»СЋС‡ РµСЃС‚СЊ РІ С‚СЂРµР±СѓРµРјРѕР№ СЃРµРєС†РёРё, С‚Рѕ РІРѕР·РІСЂР°С‰Р°РµС‚СЃСЏ Р·РЅР°С‡РµРЅРёРµ СЌС‚РѕРіРѕ РєР»СЋС‡Р°.
+                 Р•СЃР»Рё РєР»СЋС‡Р° РЅРµС‚ РІ С‚СЂРµР±СѓРµРјРѕР№ СЃРµРєС†РёРё,
+                   С‚Рѕ РІРѕР·РІСЂР°С‚ РєР»СЋС‡Р° РёР· СЃРµРєС†РёРё [default] (РїСЂРё РЅР°Р»РёС‡РёРё СЃРµРєС†РёРё default)
+                 РџСЂРё РЅР°Р»РёС‡РёРё СЃРµРєС†РёРё _always_, РµСЃР»Рё РєР»СЋС‡ РµСЃС‚СЊ РІ РЅРµР№, С‚Рѕ Р±РµСЂРµС‚СЃСЏ Р·РЅР°С‡РµРЅРёРµ РёР· _always_
+                 Р•СЃР»Рё РєР»СЋС‡Р° РЅРµС‚ РЅРё РІ С‚СЂРµР±СѓРµРјРѕР№ СЃРµРєС†РёРё, РЅРё РІ СЃРµРєС†РёРё [default], РЅРё РІ СЃРµРєС†РёРё [_always_], С‚Рѕ РІРѕР·РІСЂР°С‚ ""
+                 Р•СЃР»Рё Р·РЅР°С‡РµРЅРёРµ РєР»СЋС‡Р° = _empty_, С‚Рѕ РІРµСЂРЅРµС‚ РїСѓСЃС‚СѓСЋ СЃС‚СЂРѕРєСѓ ''
+    ###############################################################################>
+    [Object]hidden getKeyValue([string]$path, [string]$key) {
+        $result=''
+        $section = $this.getSection($path, '');
+        if ($null -eq $section) { return $result; }
+        $result = $this.getKeyValueUseDefaultAlways($section, $path, $key)
+        return $result;
+    }
+
+    [bool] getBool([string]$path, [string]$key) {
         return [bool]$this.getKeyValue($path, $key)
     }
-    [string] getString([string]$path, [string]$key)
-    {
+    [string] getString([string]$path, [string]$key) {
         return [String]$this.getKeyValue($path, $key)
     }
-    [Int] getInt([string]$path, [string]$key)
-    {
+    [Int] getInt([string]$path, [string]$key) {
         return  [int]$this.getKeyValue($path, $key)
     }
-    [long] getLong([string]$path, [string]$key)
-    {
+    [long] getLong([string]$path, [string]$key) {
         return [long]$this.getKeyValue($path, $key)
     }
 
@@ -582,13 +668,6 @@ Class FileCFG : avvBase {
     {
     }
 
-    ################## isHashtable ###########################
-    [bool] isHashtable($value)
-    {
-        #return ($value -is [Hashtable]) -or ($value -is [System.Collections.Specialized.OrderedDictionary]);
-        return ($value -is [System.Collections.IDictionary]);
-    }
-
     ################## toJson ###########################
     [String] ToString()
     {
@@ -607,7 +686,7 @@ Class FileCFG : avvBase {
 
 ### +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #    [IniCFG]
-#    Объект для работы с файлом форматов ini
+#    РћР±СЉРµРєС‚ РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ С„Р°Р№Р»РѕРј С„РѕСЂРјР°С‚РѕРІ ini
 ### +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Class IniCFG : FileCFG {
     IniCFG() : base()
@@ -630,21 +709,21 @@ Class IniCFG : FileCFG {
     }
 
     ###############################################################################
-    # Считать из файла данные.
-    # Строки [name] (SECTION) расцениваются как секция section. Т.е. в [hashtable] вставляется как
-    # встроенная [hashtable]. 1-е условие в switch
-    # Строки вида name=value (PARAMETER) расцениваются как параметр в секции key=value.
-    # Т.е. вставляется как параметр(ключ) в [hashtable][section]. 2-е условие в switch
-    # Строки начинающиеся с ';' ,'#', '*' (COMMENT) не обрабатываются,
-    # т.е. используем для комментариев.  3-е условие в switch
+    # РЎС‡РёС‚Р°С‚СЊ РёР· С„Р°Р№Р»Р° РґР°РЅРЅС‹Рµ.
+    # РЎС‚СЂРѕРєРё [name] (SECTION) СЂР°СЃС†РµРЅРёРІР°СЋС‚СЃСЏ РєР°Рє СЃРµРєС†РёСЏ section. Рў.Рµ. РІ [hashtable] РІСЃС‚Р°РІР»СЏРµС‚СЃСЏ РєР°Рє
+    # РІСЃС‚СЂРѕРµРЅРЅР°СЏ [hashtable]. 1-Рµ СѓСЃР»РѕРІРёРµ РІ switch
+    # РЎС‚СЂРѕРєРё РІРёРґР° name=value (PARAMETER) СЂР°СЃС†РµРЅРёРІР°СЋС‚СЃСЏ РєР°Рє РїР°СЂР°РјРµС‚СЂ РІ СЃРµРєС†РёРё key=value.
+    # Рў.Рµ. РІСЃС‚Р°РІР»СЏРµС‚СЃСЏ РєР°Рє РїР°СЂР°РјРµС‚СЂ(РєР»СЋС‡) РІ [hashtable][section]. 2-Рµ СѓСЃР»РѕРІРёРµ РІ switch
+    # РЎС‚СЂРѕРєРё РЅР°С‡РёРЅР°СЋС‰РёРµСЃСЏ СЃ ';' ,'#', '*' (COMMENT) РЅРµ РѕР±СЂР°Р±Р°С‚С‹РІР°СЋС‚СЃСЏ,
+    # С‚.Рµ. РёСЃРїРѕР»СЊР·СѓРµРј РґР»СЏ РєРѕРјРјРµРЅС‚Р°СЂРёРµРІ.  3-Рµ СѓСЃР»РѕРІРёРµ РІ switch
     #
-    # Если в строке типа PARAMETER указаны значения (value) как '$($str)', '"$str2"', то такие значения будут
-    # вычислены, по правилам powershel, при чтении файла. Например в файле есть key1="nameVariable",
-    # при обработке эnа строка будет вычислена, если в скрипте есть переменная и она в области видимости global
-    # или данного класса (модуля)
-    # $nameVariable=valueVariable. Если переменной нет, то будет пусто.
-    # то в [hashtable][$section][$key] будет прописано значение valueVariable.
-	###############################################################################
+    # Р•СЃР»Рё РІ СЃС‚СЂРѕРєРµ С‚РёРїР° PARAMETER СѓРєР°Р·Р°РЅС‹ Р·РЅР°С‡РµРЅРёСЏ (value) РєР°Рє '$($str)', '"$str2"', С‚Рѕ С‚Р°РєРёРµ Р·РЅР°С‡РµРЅРёСЏ Р±СѓРґСѓС‚
+    # РІС‹С‡РёСЃР»РµРЅС‹, РїРѕ РїСЂР°РІРёР»Р°Рј powershel, РїСЂРё С‡С‚РµРЅРёРё С„Р°Р№Р»Р°. РќР°РїСЂРёРјРµСЂ РІ С„Р°Р№Р»Рµ РµСЃС‚СЊ key1="nameVariable",
+    # РїСЂРё РѕР±СЂР°Р±РѕС‚РєРµ СЌnР° СЃС‚СЂРѕРєР° Р±СѓРґРµС‚ РІС‹С‡РёСЃР»РµРЅР°, РµСЃР»Рё РІ СЃРєСЂРёРїС‚Рµ РµСЃС‚СЊ РїРµСЂРµРјРµРЅРЅР°СЏ Рё РѕРЅР° РІ РѕР±Р»Р°СЃС‚Рё РІРёРґРёРјРѕСЃС‚Рё global
+    # РёР»Рё РґР°РЅРЅРѕРіРѕ РєР»Р°СЃСЃР° (РјРѕРґСѓР»СЏ)
+    # $nameVariable=valueVariable. Р•СЃР»Рё РїРµСЂРµРјРµРЅРЅРѕР№ РЅРµС‚, С‚Рѕ Р±СѓРґРµС‚ РїСѓСЃС‚Рѕ.
+    # С‚Рѕ РІ [hashtable][$section][$key] Р±СѓРґРµС‚ РїСЂРѕРїРёСЃР°РЅРѕ Р·РЅР°С‡РµРЅРёРµ valueVariable.
+    ###############################################################################
     [Hashtable]importInifile([string]$filename){
         ([FileCFG]$this).importInifile($filename);
         $iniObj = [ordered]@{}
@@ -653,21 +732,21 @@ Class IniCFG : FileCFG {
         $this.isExcept(!$isFile, "Not exists file configuration: $($filename)")
         if ($isFile)
         {
-            # если файл существует и он не каталог.
+            # РµСЃР»Рё С„Р°Р№Р» СЃСѓС‰РµСЃС‚РІСѓРµС‚ Рё РѕРЅ РЅРµ РєР°С‚Р°Р»РѕРі.
             $section = ""
             switch -regex -File $filename
             {
                 "^\[(.+)\]$" {
-                    # строки вида:
+                    # СЃС‚СЂРѕРєРё РІРёРґР°:
                     # [name]
                     $section = $matches[1]
                     $iniObj[$section] = [ordered]@{ }
                     #Continue
                 }
                 "(?<key>^[^\#\;\=]*)[=?](?<value>.+)" {
-                    # строки вида:
+                    # СЃС‚СЂРѕРєРё РІРёРґР°:
                     # name=value, name=$(value), name="value",
-                    # где value - вычисляемое выражение, переменная скрипта
+                    # РіРґРµ value - РІС‹С‡РёСЃР»СЏРµРјРѕРµ РІС‹СЂР°Р¶РµРЅРёРµ, РїРµСЂРµРјРµРЅРЅР°СЏ СЃРєСЂРёРїС‚Р°
                     $key = $matches.key.Trim()
                     $value = $matches.value.Trim()
 
@@ -686,9 +765,9 @@ Class IniCFG : FileCFG {
                     continue
                 }
                 "(?<key>^[^\#\;\=]*)[=?]" {
-                    # строки вида:
+                    # СЃС‚СЂРѕРєРё РІРёРґР°:
                     # name=
-                    # т.е. пустые
+                    # С‚.Рµ. РїСѓСЃС‚С‹Рµ
                     $key = $matches.key.Trim()
                     if ($section)
                     {
@@ -703,40 +782,40 @@ Class IniCFG : FileCFG {
         } ## if ($isFile)
         return $iniObj
     }
-	
+    
     [Void] saveToFile([string]$filename, [bool]$isOverwrite){
-        # если $this.filename = '_empty_' или пустой строке, то выход
+        # РµСЃР»Рё $this.filename = '_empty_' РёР»Рё РїСѓСЃС‚РѕР№ СЃС‚СЂРѕРєРµ, С‚Рѕ РІС‹С…РѕРґ
         if (!$filename -or ($filename.ToUpper() -eq '_empty_'.ToUpper() ))
         {
             return;
         }
-        # проверить что каталога с таким именем нет.
+        # РїСЂРѕРІРµСЂРёС‚СЊ С‡С‚Рѕ РєР°С‚Р°Р»РѕРіР° СЃ С‚Р°РєРёРј РёРјРµРЅРµРј РЅРµС‚.
         if (Test-Path $filename -PathType Container){
-            $msg = $this.isExcept($true, "Невозможно записать в файл, так как он является каталогом");
+            $msg = $this.isExcept($true, "РќРµРІРѕР·РјРѕР¶РЅРѕ Р·Р°РїРёСЃР°С‚СЊ РІ С„Р°Р№Р», С‚Р°Рє РєР°Рє РѕРЅ СЏРІР»СЏРµС‚СЃСЏ РєР°С‚Р°Р»РѕРіРѕРј");
             Write-Host $msg;
             return;
-            #throw "Невозможно записать в файл, так как он является каталогом";
+            #throw "РќРµРІРѕР·РјРѕР¶РЅРѕ Р·Р°РїРёСЃР°С‚СЊ РІ С„Р°Р№Р», С‚Р°Рє РєР°Рє РѕРЅ СЏРІР»СЏРµС‚СЃСЏ РєР°С‚Р°Р»РѕРіРѕРј";
         }
-        # проверить что файл с таким именем есть и перезапись запрешена.
+        # РїСЂРѕРІРµСЂРёС‚СЊ С‡С‚Рѕ С„Р°Р№Р» СЃ С‚Р°РєРёРј РёРјРµРЅРµРј РµСЃС‚СЊ Рё РїРµСЂРµР·Р°РїРёСЃСЊ Р·Р°РїСЂРµС€РµРЅР°.
         if ( (Test-Path $filename -PathType Leaf) -and !$isOverwrite){
-            $msg = $this.isExcept($true, "Файл существует, а перезапись запрещена");
+            $msg = $this.isExcept($true, "Р¤Р°Р№Р» СЃСѓС‰РµСЃС‚РІСѓРµС‚, Р° РїРµСЂРµР·Р°РїРёСЃСЊ Р·Р°РїСЂРµС‰РµРЅР°");
             Write-Host $msg;
             return;
-            #throw "Невозможно записать в файл, так как перезапись запрещена";
+            #throw "РќРµРІРѕР·РјРѕР¶РЅРѕ Р·Р°РїРёСЃР°С‚СЊ РІ С„Р°Р№Р», С‚Р°Рє РєР°Рє РїРµСЂРµР·Р°РїРёСЃСЊ Р·Р°РїСЂРµС‰РµРЅР°";
         }
         $sections=$this.readSection('.');
-        #$sections=$this.readSection('.'); # аналогичный результат
-        # проверить что смогли считать корневую секцию CFG
+        #$sections=$this.readSection('.'); # Р°РЅР°Р»РѕРіРёС‡РЅС‹Р№ СЂРµР·СѓР»СЊС‚Р°С‚
+        # РїСЂРѕРІРµСЂРёС‚СЊ С‡С‚Рѕ СЃРјРѕРіР»Рё СЃС‡РёС‚Р°С‚СЊ РєРѕСЂРЅРµРІСѓСЋ СЃРµРєС†РёСЋ CFG
         $nameRootSection = '__root__';
         if ($sections.code -eq 0) {
-            # считали секцию CFG
+            # СЃС‡РёС‚Р°Р»Рё СЃРµРєС†РёСЋ CFG
             $data2file=@{
                 "$nameRootSection"=@()
             };
             $sections=$sections.result;
             foreach ($key in $sections.Keys){
-                # цикл по всем ключам
-                # значение текущего ключа
+                # С†РёРєР» РїРѕ РІСЃРµРј РєР»СЋС‡Р°Рј
+                # Р·РЅР°С‡РµРЅРёРµ С‚РµРєСѓС‰РµРіРѕ РєР»СЋС‡Р°
                 $cSect = $sections[$key];
                 if ($this.isHashtable($cSect))
                 #if (
@@ -744,7 +823,7 @@ Class IniCFG : FileCFG {
                 #        ($cSect -is [System.Collections.Specialized.OrderedDictionary])
                 #    )
                 {
-                    # если тип значения текущего ключа есть Hashtable
+                    # РµСЃР»Рё С‚РёРї Р·РЅР°С‡РµРЅРёСЏ С‚РµРєСѓС‰РµРіРѕ РєР»СЋС‡Р° РµСЃС‚СЊ Hashtable
                     #$data2file[$key] += "[$($Key)]";
                     $data2file[$key] = @()
                     $cSect.GetEnumerator() | ForEach-Object { #"{0}={1}" -f $_.key, $_.value }
@@ -752,18 +831,18 @@ Class IniCFG : FileCFG {
                     }
                 }
                 else {
-                    # если тип значения текущего ключа не Hashtable,
-                    # т.е. просто ключ=значение
+                    # РµСЃР»Рё С‚РёРї Р·РЅР°С‡РµРЅРёСЏ С‚РµРєСѓС‰РµРіРѕ РєР»СЋС‡Р° РЅРµ Hashtable,
+                    # С‚.Рµ. РїСЂРѕСЃС‚Рѕ РєР»СЋС‡=Р·РЅР°С‡РµРЅРёРµ
                     $data2file.$nameRootSection += "$($key)=$($cSect)";
                 }
             }
-            # записать в файл, если в массиве есть данные
+            # Р·Р°РїРёСЃР°С‚СЊ РІ С„Р°Р№Р», РµСЃР»Рё РІ РјР°СЃСЃРёРІРµ РµСЃС‚СЊ РґР°РЅРЅС‹Рµ
             <#
             if ($data2file.Count -gt 0) {
                 $data2file | Out-File -FilePath $filename -Force -Encoding default;
             }
             #>
-            # записать в файл
+            # Р·Р°РїРёСЃР°С‚СЊ РІ С„Р°Р№Р»
             $df = @();
             $data2file.$nameRootSection.foreach({
                 $df += $_;
@@ -783,13 +862,13 @@ Class IniCFG : FileCFG {
             #
             }
             $df | Out-File -FilePath $filename -Force -Encoding default;
-        } ### если были секции в hashtable
+        } ### РµСЃР»Рё Р±С‹Р»Рё СЃРµРєС†РёРё РІ hashtable
     }
 }
 
 ### +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #    [JsonCFG]
-#    Объект для работы с файлом форматов json
+#    РћР±СЉРµРєС‚ РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ С„Р°Р№Р»РѕРј С„РѕСЂРјР°С‚РѕРІ json
 ### +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 class JsonCFG : FileCFG
 {
@@ -825,7 +904,7 @@ class JsonCFG : FileCFG
         $iniObj = [ordered]@{}
         if ($filename -or ($filename.ToUpper() -ne "_empty_".ToUpper()) )
         {
-            # filename не пустой и не равен '_empty'
+            # filename РЅРµ РїСѓСЃС‚РѕР№ Рё РЅРµ СЂР°РІРµРЅ '_empty'
             #$majV = $avvVersion.Major;
             $json = (Get-Content -Path $filename -Raw);
             #$json = ( (Get-Content -Path $filename -Raw) | ConvertFrom-JsonToHashtable -casesensitive );
@@ -844,26 +923,26 @@ class JsonCFG : FileCFG
     [Void]
     saveToFile([string]$filename, [bool]$isOverwrite)
     {
-        # если $this.filename = '_empty_' или пустой строке, то выход
+        # РµСЃР»Рё $this.filename = '_empty_' РёР»Рё РїСѓСЃС‚РѕР№ СЃС‚СЂРѕРєРµ, С‚Рѕ РІС‹С…РѕРґ
         if (!$filename -or ($filename.ToUpper() -eq '_empty_'.ToUpper() ))
         {
             return;
         }
-        # проверить что каталога с таким именем нет.
+        # РїСЂРѕРІРµСЂРёС‚СЊ С‡С‚Рѕ РєР°С‚Р°Р»РѕРіР° СЃ С‚Р°РєРёРј РёРјРµРЅРµРј РЅРµС‚.
         if (Test-Path $filename -PathType Container){
-            $msg = $this.isExcept($true, "Невозможно записать в файл, так как он является каталогом");
+            $msg = $this.isExcept($true, "РќРµРІРѕР·РјРѕР¶РЅРѕ Р·Р°РїРёСЃР°С‚СЊ РІ С„Р°Р№Р», С‚Р°Рє РєР°Рє РѕРЅ СЏРІР»СЏРµС‚СЃСЏ РєР°С‚Р°Р»РѕРіРѕРј");
             Write-Host $msg;
             return;
-            #throw "Невозможно записать в файл, так как он является каталогом";
+            #throw "РќРµРІРѕР·РјРѕР¶РЅРѕ Р·Р°РїРёСЃР°С‚СЊ РІ С„Р°Р№Р», С‚Р°Рє РєР°Рє РѕРЅ СЏРІР»СЏРµС‚СЃСЏ РєР°С‚Р°Р»РѕРіРѕРј";
         }
-        # проверить что файл с таким именем есть и перезапись запрешена.
+        # РїСЂРѕРІРµСЂРёС‚СЊ С‡С‚Рѕ С„Р°Р№Р» СЃ С‚Р°РєРёРј РёРјРµРЅРµРј РµСЃС‚СЊ Рё РїРµСЂРµР·Р°РїРёСЃСЊ Р·Р°РїСЂРµС€РµРЅР°.
         if ( (Test-Path $filename -PathType Leaf) -and !$isOverwrite){
-            $msg = $this.isExcept($true, "Файл существует, а перезапись запрещена");
+            $msg = $this.isExcept($true, "Р¤Р°Р№Р» СЃСѓС‰РµСЃС‚РІСѓРµС‚, Р° РїРµСЂРµР·Р°РїРёСЃСЊ Р·Р°РїСЂРµС‰РµРЅР°");
             Write-Host $msg;
             return;
-            #throw "Невозможно записать в файл, так как перезапись запрещена";
+            #throw "РќРµРІРѕР·РјРѕР¶РЅРѕ Р·Р°РїРёСЃР°С‚СЊ РІ С„Р°Р№Р», С‚Р°Рє РєР°Рє РїРµСЂРµР·Р°РїРёСЃСЊ Р·Р°РїСЂРµС‰РµРЅР°";
         }
-        # имя файла верное
+        # РёРјСЏ С„Р°Р№Р»Р° РІРµСЂРЅРѕРµ
         $this.CFG | ConvertTo-JSON -Depth 100 | Set-Content -Path $filename;
     }
 }

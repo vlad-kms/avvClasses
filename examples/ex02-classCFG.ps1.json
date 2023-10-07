@@ -1,0 +1,31 @@
+{
+  "default": {
+    "token": "def_p3",
+    "dns_cli.s1.p3": "def-dot-p3",
+    "p4": "def-p4",
+    "dns_cli.p2.p22": "default-dot-dns_cli.p2.p22",
+    "dns_cli.p2.p21.p211.p2112": "default-dot-dns_cli.p2.p21.p211.p2112",
+    "dns_selectel.config.p3": "def-selectel-dot-p3"
+  },
+  "dns_selectel": {
+    "config":{
+        "Token": "",
+        "ServiceUri": "https://dbg.alt.avkms.ru/hs/er1",
+        "p3": "",
+        "p4": ""
+    }
+  },
+  "dns_1cloud": {
+    "config":{
+        "Token": "",
+        "ServiceUri": "https://dbg.alt.avkms.ru/hs/er1",
+        "p4": ""
+    }
+  },
+  "_always_": {
+    "p3": "always_p3",
+    "dns_cli.s1.p3": "always-dot-p3",
+    "dns_cli.s1.p2": "always-dot-p2",
+    "dns_cli.p2.p22": "always-dot-dns_cli.p2.p22"
+  }
+}

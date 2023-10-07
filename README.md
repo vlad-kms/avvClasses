@@ -5,11 +5,11 @@
 #### Get-Logger
 Вернуть класс Logger, конструктор Logger ([String]$logFile, [int]$logLevel, [boolean]$isAppend, [int32]$tabWidth, [bool]$isExpandTab)
 #### Get-IniCFG
-Вернуть класс IniCFG, конструктор Logger ([String]$logFile, [int]$logLevel, [boolean]$isAppend, [int32]$tabWidth, [bool]$isExpandTab)
+Вернуть класс IniCFG
 
 #### Get-AvvClass
 #### ConvertJSONToHash
-#### ConvertFrom-JsonToHashtable TODO НЕ РАБОТАЕТ, ТОЛКО первый уровень вложенности.
+#### ConvertFrom-JsonToHashtable TODO НЕ РАБОТАЕТ, ТОЛЬКО первый уровень вложенности.
 #### Get-Version
 #### Get-SupportedClasses
 #### IsSupportedClass
