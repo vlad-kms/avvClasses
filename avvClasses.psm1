@@ -265,7 +265,6 @@ function addHashtable {
     return $result
 }
 
-
 function Merge-Hashtable{
     [CmdletBinding()]
     Param(
@@ -283,6 +282,7 @@ function Merge-Hashtable{
     }
     process {
         Write-Verbose "Merge-Hashtable process: ==================================================="
+        <#
         if ($_) {
             [hashtable]$src=$_
         } else {
@@ -290,7 +290,9 @@ function Merge-Hashtable{
         }
         Write-Verbose "Source (src): $($src | ConvertTo-Json -Depth 100)"
         $result = (AddHashtable -Source $src -Dest $result -Action:$AddOnly)
-        #$result += $src
+        #>
+        Write-Verbose "Source : $($Source | ConvertTo-Json -Depth 100)"
+        $result = (AddHashtable -Source $Source -Dest $result -Action:$AddOnly)
     }
     end {
         Write-Verbose "Merge-Hashtable end: ======================================================="
