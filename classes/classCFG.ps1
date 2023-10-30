@@ -675,11 +675,26 @@ Class FileCFG : avvBase {
     }
     [String] ToJson()
     {
-        return ($this | ConvertTo-Json -Depth 100);
+        $th = $this.clone()
+        <# спрятать все значения ключей начинающихся (регистронезависимое сравнение) с:
+            1) secret
+            2) token
+            3) password
+            4) hidden
+        #>
+
+        return ($th | ConvertTo-Json -Depth 100);
     }
     [String] ToJson([string]$path)
     {
-        return ($this.getSection($path) | ConvertTo-Json -Depth 100);
+        $th = $this.getSection($path).clone()
+        <# спрятать все значения ключей начинающихся (регистронезависимое сравнение) с:
+            1) secret
+            2) token
+            3) password
+            4) hidden
+        #>
+        return ($th | ConvertTo-Json -Depth 100);
     }
 }
 
