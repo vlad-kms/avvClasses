@@ -201,4 +201,11 @@ class avvBase : Object {
     [avvBase] copy() {
         return $this.clone()
     }
+    <# Клонировать любой объект #>
+    static [System.Object] copyFrom([Object] $Source) {
+        $typeObj = $Source.getType()
+        $res = [System.Management.Automation.PSSerializer]::Serialize($Source,999)
+        $result=([System.Management.Automation.PSSerializer]::Deserialize($res) -as $typeObj)
+        return $result
+    }
 }
