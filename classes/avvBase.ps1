@@ -194,7 +194,7 @@ class avvBase : Object {
     <##>
     [avvBase] clone() {
         $typeObj = $this.getType()
-        $res = [System.Management.Automation.PSSerializer]::Serialize($this,2)
+        $res = [System.Management.Automation.PSSerializer]::Serialize($this,999)
         $result=([System.Management.Automation.PSSerializer]::Deserialize($res) -as $typeObj)
         return $result
     }
