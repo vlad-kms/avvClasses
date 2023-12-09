@@ -689,7 +689,7 @@ Class FileCFG : avvBase {
     [String] ToJson([string]$path)
     {
         #$th = $this.getSection($path).clone()
-        $th = $this
+        $th = $this.getSection($path)
         <# спрятать все значения ключей начинающихся (регистронезависимое сравнение) с:
             1) secret
             2) token
