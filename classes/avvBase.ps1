@@ -11,7 +11,8 @@ class avvBase : Object {
     avvBase ()
     {
         $this.AddOrMerge = [FlagAddHashtable]::Merge
-        Write-Verbose "Создали объект $($this.getType()) : $($this.ToString())"
+        #Write-Verbose "Создали объект $($this.getType()) : $($this.ToString())"
+        Write-Verbose "Создали объект $($this.getType())"
     }
 
     <#########################################################
@@ -193,10 +194,13 @@ class avvBase : Object {
 
     <# Клонировать текущий объект #>
     [avvBase] clone() {
+        return [avvBase]::copyFrom($this)
+        <#
         $typeObj = $this.getType()
         $res = [System.Management.Automation.PSSerializer]::Serialize($this,999)
         $result=([System.Management.Automation.PSSerializer]::Deserialize($res) -as $typeObj)
         return $result
+        #>
     }
     [avvBase] copy() {
         return $this.clone()
