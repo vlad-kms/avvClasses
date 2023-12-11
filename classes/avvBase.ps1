@@ -11,6 +11,7 @@ class avvBase : Object {
     avvBase ()
     {
         $this.AddOrMerge = [FlagAddHashtable]::Merge
+        Write-Verbose "avvBase::new() ================================================"
         #Write-Verbose "Создали объект $($this.getType()) : $($this.ToString())"
         Write-Verbose "Создали объект $($this.getType())"
     }
@@ -26,6 +27,9 @@ class avvBase : Object {
         }
     #########################################################>
     avvBase ([Hashtable]$params) {
+        Write-Verbose "avvBase::new(params) =============================================="
+        Write-Verbose "Создали объект $($this.getType())"
+        Write-Verbose "params: $($params|ConvertTo-Json -Depth 5)"
         $this.initFromHashtable($params)
     }
 
@@ -38,6 +42,8 @@ class avvBase : Object {
 
     <##>
     [void]initFromHashtable([Hashtable]$params) {
+        Write-Verbose "avvBase::initFromHashtable(params) ============================================="
+        Write-Verbose "params: $($params|ConvertTo-Json -Depth 5)"
         $keyObj = '_obj_';
         if ( $params.Contains($keyObj))
         {
@@ -106,7 +112,7 @@ class avvBase : Object {
         $result = $false
         try {
             if ($null -eq $Dest) {throw "Объект назначения не может быть null"}
-            Write-Verbose "============================================="
+            Write-Verbose "avvBase::addHashtable (Source, Dest, Action) ============================================="
             Write-Verbose "Source: $($Source|ConvertTo-Json -Depth 2)"
             Write-Verbose "Dest: $($Dest)"
             Write-Verbose "Action: $($Action)"
@@ -194,6 +200,7 @@ class avvBase : Object {
 
     <# Клонировать текущий объект #>
     [avvBase] clone() {
+        Write-Verbose "avvBase::clone () ============================================="
         return [avvBase]::copyFrom($this)
         <#
         $typeObj = $this.getType()
@@ -203,10 +210,13 @@ class avvBase : Object {
         #>
     }
     [avvBase] copy() {
+        Write-Verbose "avvBase::copy () ============================================="
         return $this.clone()
     }
     <# Клонировать любой объект #>
     static [System.Object] copyFrom([Object] $Source) {
+        Write-Verbose "avvBase::copyFrom (Source) ============================================="
+        Write-Verbose "Source: $($Source|ConvertTo-Json -Depth 5)"
         $typeObj = $Source.getType()
         $res = [System.Management.Automation.PSSerializer]::Serialize($Source,999)
         $result=([System.Management.Automation.PSSerializer]::Deserialize($res) -as $typeObj)

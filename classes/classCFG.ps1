@@ -675,8 +675,8 @@ Class FileCFG : avvBase {
     }
     [String] ToJson()
     {
+        Write-Verbose "Class FileCFG::ToJson() ============================================="
         #$th = $this.clone()
-        #$th = $this.readSection('.').resultDefs
         $th = $this
         <# спрятать все значения ключей начинающихся (регистронезависимое сравнение) с:
             1) secret
@@ -689,6 +689,8 @@ Class FileCFG : avvBase {
     }
     [String] ToJson([string]$path)
     {
+        Write-Verbose "Class FileCFG::ToJson(path) ============================================="
+        Write-Verbose "Source: $($path|ConvertTo-Json -Depth 5)"
         #$th = $this.getSection($path).clone()
         $th = $this.getSection($path)
         #$th = $this
