@@ -6,12 +6,15 @@
 class avvBase : Object {
 #class avvBase : PSCustomObject {
     hidden [FlagAddHashtable] $AddOrMerge
+    hidden [string] $id
 
     <##>
     avvBase ()
     {
         $this.AddOrMerge = [FlagAddHashtable]::Merge
-        Write-Verbose "Создали объект $($this.getType()) : $($this)"
+        Write-Verbose "avvBase::new() ================================================"
+        #Write-Verbose "Создали объект $($this.getType()) : $($this.ToString())"
+        Write-Verbose "Создали объект $($this.getType())"
     }
 
     <#########################################################
@@ -25,6 +28,9 @@ class avvBase : Object {
         }
     #########################################################>
     avvBase ([Hashtable]$params) {
+        Write-Verbose "avvBase::new(params) =============================================="
+        Write-Verbose "Создали объект $($this.getType())"
+        Write-Verbose "params: $($params|ConvertTo-Json -Depth 5)"
         $this.initFromHashtable($params)
     }
 
@@ -37,6 +43,8 @@ class avvBase : Object {
 
     <##>
     [void]initFromHashtable([Hashtable]$params) {
+        Write-Verbose "avvBase::initFromHashtable(params) ============================================="
+        Write-Verbose "params: $($params|ConvertTo-Json -Depth 5)"
         $keyObj = '_obj_';
         if ( $params.Contains($keyObj))
         {
@@ -105,8 +113,8 @@ class avvBase : Object {
         $result = $false
         try {
             if ($null -eq $Dest) {throw "Объект назначения не может быть null"}
-            Write-Verbose "============================================="
-            Write-Verbose "Source: $($Source|ConvertTo-Json -Depth 2)"
+            Write-Verbose "avvBase::addHashtable (Source, Dest, Action) ============================================="
+            Write-Verbose "Source: $($Source)"
             Write-Verbose "Dest: $($Dest)"
             Write-Verbose "Action: $($Action)"
             foreach($Key in $Source.Keys) {
@@ -161,34 +169,92 @@ class avvBase : Object {
         return $result
     }
 
+    <#
+    [String] ObjectToJson($Source, [bool]$HiddenSecret) {
+        Write-Verbose "avvBase::ObjectToJson(Source, HiddenSecret) ============================================="
+        Write-Verbose "Source: $($Source)"
+        Write-Verbose "HiddenSecret: $($HiddenSecret)"
+        Write-Verbose "this.getType(): $($this.getType())"
+        $result = ($Source| ConvertTo-Json -Depth 100);
+
+        return $result
+    }
+    #>
     <##>
      [String] ToJson()
     {
+        Write-Verbose "avvBase::ToJson() ============================================="
+        Write-Verbose "$($this) ============================================="
         return ($this | ConvertTo-Json -Depth 100);
+        #return  ObjectToJson($this, $true);
     }
 
     <##>
     ################## isHashtable ###########################
     [bool] isHashtable($value)
     {
+        <#
         #return ($value -is [Hashtable]) -or ($value -is [System.Collections.Specialized.OrderedDictionary]);
         $result = ($value -is [System.Collections.IDictionary]);
         return $result
+        #>
+        return [avvBase]::isHashtableStatic($value)
+    }
+
+    static [bool] isHashtableStatic($value)
+    {
+        return ($value -is [System.Collections.IDictionary]);
     }
 
     <##>
     [bool] isObject($Value) {
         #return ($value -is [Hashtable]) -or ($value -is [System.Collections.Specialized.OrderedDictionary]);
         #$result= ($Value -is [System.Object] -or $Value -is [PSObject] -or $Value -is [PSCustomObject])
-        $result = $Value -is [avvBase]
+        #$result = ($Value -is [avvBase]) -or ($Value -is [PSCustomObject])
+        $result = [avvBase]::isObjectStatic($Value)
         return $result
+    }
+    static [bool] isObjectStatic($Value) {
+        return ($Value -is [avvBase]) -or ($Value -is [PSCustomObject])
     }
 
     <##>
     [bool] isCompositeType($Value) {
+        <#
         $result= ($this.isHashtable($Value) -or 
                 $this.isObject($Value))
         return $result
+        #>
+        return [avvBase]::isCompositeTypeStatic($Value)
+    }
+    static [bool] isCompositeTypeStatic($Value) {
+        return ([avvBase]::isHashtableStatic($Value) -or 
+                [avvBase]::isObjectStatic($Value))
     }
 
+    <# Клонировать текущий объект #>
+    [avvBase] clone() {
+        Write-Verbose "avvBase::clone () ============================================="
+        return [avvBase]::copyFrom($this)
+        <#
+        $typeObj = $this.getType()
+        $res = [System.Management.Automation.PSSerializer]::Serialize($this,999)
+        $result=([System.Management.Automation.PSSerializer]::Deserialize($res) -as $typeObj)
+        return $result
+        #>
+    }
+    [avvBase] copy() {
+        Write-Verbose "avvBase::copy () ============================================="
+        return $this.clone()
+    }
+    <# Клонировать любой объект #>
+    static [System.Object] copyFrom([Object] $Source) {
+        Write-Verbose "avvBase::copyFrom (Source) ============================================="
+        Write-Verbose "$($Source) ============================================="
+        #Write-Verbose "Source: $($Source|ConvertTo-Json -Depth 5)"
+        $typeObj = $Source.getType()
+        $res = [System.Management.Automation.PSSerializer]::Serialize($Source,999)
+        $result=([System.Management.Automation.PSSerializer]::Deserialize($res) -as $typeObj)
+        return $result
+    }
 }

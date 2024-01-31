@@ -1,7 +1,41 @@
-﻿#. .\classes\classLogger.ps1
+#. .\classes\classLogger.ps1
 
 function Get-InfoModule{
-    $res=[ordered]@{}
+<#
+    .SYNOPSIS
+    Возвращает информацию о модуле avvClasses.
+    
+    .DESCRIPTION
+    Возвращает полную информацию о модуле avvClasses.
+
+    .OUTPUTS
+    Name: Info
+    BaseType: [System.Collections.Specialized.OrderedDictionary]
+        - filenameIgnoreModule      - файл со списком модулей из Classes, которые не надо импортировать при загрузке модуля avvClasses
+        - filenameSupportedClasses  - файл со списком модулей из Classes, поддерживаемые модулем avvClasses
+        - pathModules               - путь где находятся вложенные модули
+        - pathMain                  - путь к модулю avvClasses.psm1
+        - importedModules'          - импортированные модули при загрузке avvClasses.psm1 из вложенных
+        - nestedModules'            - модули для импорта в качестве вложенных модулей модуля, указанного в параметре RootModule/ModuleToProcess
+        - supportedClasses'         - поддерживаемые классы во вложенных модулях
+    .EXAMPLE
+    Получить информацию о модуле:
+
+    PS C:\Windows\system32> Get-InfoModule
+
+    Name                           Value
+    ----                           -----
+    filenameIgnoreModule           .avvmoduleignore
+    filenameSupportedClasses       .avvclassessupported
+    pathModules                    D:\Tools\~scripts.ps\avvClasses\classes\
+    pathMain                       C:\Program Files\WindowsPowerShell\Modules\avvClasses\avvClasses.psm1
+    importedModules                {avvBase.ps1, classCFG.ps1, classLogger.ps1, classTest.ps1}
+    nestedModules                  {avvBase, classLogger, classCFG}
+    supportedClasses               {avvBase, IniCFG, JsonCFG, Logger...}
+    
+#>
+[OutputType([System.Collections.Specialized.OrderedDictionary])]
+$res=[ordered]@{}
     $res.Add('filenameIgnoreModule', "$($filenameIgnoreModule)")
     $res.Add('filenameSupportedClasses', "$($filenameSupportedClasses)")
     $res.Add('pathModules', "$($pathModules)")
@@ -186,18 +220,37 @@ function ConvertFrom-JsonToHashtable {
     return $dict
 }
 
+<#
+    .SYNOPSIS
+    Вернуть версию Powershell
+    .DESCRIPTION
+    Вернуть системную переменную $PSVersionTable, содержащую версию Powershell
+    .OUTPUTS
+    Name: PSVersionTable
+    BaseType: Hashtable
+#>
 function Get-Version{
     return $PSVersionTable;
 }
 
-<# Объединение двух hastable
-    $Source     = hashtable который надо добавить
+<#
+    .SYNOPSIS
+    Объединение двух hashtable
+    .DESCRIPTION
+    Объединить две HASHTABLE: добавить $Source в $Dest.
+    Если передан ключ [switch]$Action, то в $Dest добавляются только те значения (Key, Value) из $Source, которые отсутствуют в целевой Hastable
+    Если не передан ключ [switch]$Action, то в $Dest добавляются отсутствующие значения (Key, Value) из $Source, существующие значения заменяются значениями из $Source
+    .PARAMETER Dest
+    Целевая Hashtable, к которой надо добавить исходную Hashtable
+    .PARAMETER Source
+    Исходная Hashtable, которую надо добавить к целевой
     $Dest       = hashtable к которому надо добавить
-    $Action     = $true, только добавление отсутствующих ключей
-                  $false добавление отсутствующих или изменение существующих ключей
+    .PARAMETER Action
+    Указывает что делать при объединении:
+        -Action присутствует: добавить только отсутствующие (Key, Value)
+        -Action  отсутствует: добавить отсутствующие и изменить существующие (Key, Value)
  #>
 
-#function addHashtable([hashtable]$Source, [hashtable]$Dest, [bool]$Action) {
 function addHashtable {
     [CmdletBinding()]
     Param(
@@ -263,6 +316,35 @@ function addHashtable {
         throw $PSItem
     }
     return $result
+}
+
+function Get-VerboseSession {
+    Write-Verbose "Get-VerboseSession: ======================================================="
+    return $VerbosePreference
+}
+
+function Set-VerboseSession {
+    [CmdletBinding()]
+    Param(
+        [Parameter(ValueFromPipeline=$True, Position=0)]
+        [ValidateSet('Enable', 'Disable')]
+        $Value='Disable'
+    )
+    begin {
+        Write-Verbose "Set-VerboseSession begin: ====================================================="
+        Write-Verbose "Value: $($Value)"
+    }
+    process {
+        Write-Verbose "Set-VerboseSession process: ==================================================="
+        if ($Value -eq 'Enable') {
+            $VerbosePreference = "Continue"
+        } else {
+            $VerbosePreference = "SilentlyContinue"
+        }
+    }
+    end {
+        Write-Verbose "Merge-Hashtable end: ======================================================="
+    }
 }
 
 function Merge-Hashtable{
