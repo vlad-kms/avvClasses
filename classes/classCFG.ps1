@@ -1,4 +1,4 @@
-﻿#using module '.\avvBase.ps1';
+﻿using module '.\avvBase.ps1';
 
 #using module "D:\Tools\~scripts.ps\avvClasses\classes\avvBase.ps1";
 #. "D:\Tools\~scripts.ps\avvClasses\classes\avvBase.ps1";
@@ -108,25 +108,38 @@ Class FileCFG : avvBase {
     [bool] $isOverwrite     =$false;
     [bool] $isDebug         =$false;
     [String]hidden $currentSection ='.';
+    [System.Collections.Generic.List[String]]hidden $SecretKeys = @(
+        'password',
+        'pass',
+        'passwd',
+        'pswd',
+        'pwd',
+        'secret',
+        'token'
+    )
 
     <#################################################
     #   Constructors
     #################################################>
     FileCFG(){
+        Write-Verbose "Class FileCFG::FileCFG() ============================================="
         $this.filename=$PSCommandPath + $this.getExtensionForClass();
         $this.initFileCFG();
     }
     FileCFG([bool]$EaE){
+        Write-Verbose "Class FileCFG::FileCFG(bool EaE) ============================================="
         $this.filename=$PSCommandPath + $this.getExtensionForClass();
         #$this.errorAsException=$EaE
         $this.errorAsException=$EaE
         $this.initFileCFG();
     }
     FileCFG([string]$FN){
+        Write-Verbose "Class FileCFG::FileCFG(string FN) ============================================="
         $this.filename=$FN;
         $this.initFileCFG();
     }
     FileCFG([string]$FN, [bool]$EaE) {
+        Write-Verbose "Class FileCFG::FileCFG(string FN, bool EaE) ============================================="
         $this.filename=$FN;
         #$this.errorAsException=$EaE
         $this.errorAsException=$EaE
@@ -134,6 +147,7 @@ Class FileCFG : avvBase {
     }
 
     FileCFG([string]$FN, [bool]$EaE, [Hashtable]$CFG) {
+        Write-Verbose "Class FileCFG::FileCFG(string FN, bool EaE, Hashtable CFG) ============================================="
         #$FN = '_empty_';
         if ($null -ne $FN) {
             $this.filename = $FN;
@@ -147,6 +161,7 @@ Class FileCFG : avvBase {
 
     #FileCFG([Hashtable]$CFG) : base ($CFG){
     FileCFG([Hashtable]$CFG) : base (){
+        Write-Verbose "Class FileCFG::FileCFG(Hashtable CFG) ============================================="
         # входящий hashtable:
         #   @{
         #       '_obj_'           =@{} - значения для свойств объекта базового класса
@@ -186,6 +201,18 @@ Class FileCFG : avvBase {
         {
             $this.addHashtable($CFG.$keyCurrent, $this.CFG, [FlagAddHashtable]::Merge);
         }
+    }
+
+    static[System.Collections.Generic.List[String]] DefaultSecretKeys() {
+        return [System.Collections.Generic.List[String]]  @(
+                'password',
+                'pass',
+                'passwd',
+                'pswd',
+                'pwd',
+                'secret',
+                'token'
+            )
     }
 
     <#################################################
@@ -669,30 +696,114 @@ Class FileCFG : avvBase {
     }
 
     ################## toJson ###########################
+    <#
     [String] ToString()
     {
-        return $this.ToJson();
+        #return $this.ToJson();
+        return ($this | ConvertTo-Json -Depth 100);
     }
+    #>
+    hidden [void] ObjectToJson([ref]$Source, [bool]$HiddenSecret, [System.Collections.Generic.List[String]]$ArraySecrets) {
+        Write-Verbose "Class FileCFG::ObjectToJson(Source, HiddenSecret) ============================================="
+        Write-Verbose "this: $($this)"
+        Write-Verbose "Source: $($Source.Value)"
+        Write-Verbose "HiddenSecret: $($HiddenSecret)"
+        Write-Verbose "ArraySecrets: $($ArraySecrets)"
+
+        $HiddenSecret = $false #TODO Удалить. Сделано для пропуска убирания секретов, потому что пока не работает
+        if ($HiddenSecret) {
+            [System.Collections.Generic.List[String]]$ArSec = [FileCFG]::DefaultSecretKeys()
+            if ($null -eq $ArraySecrets) {
+                $ArSec += $this.SecretKeys
+            } else {
+                $ArSec = $ArraySecrets + $this.SecretKeys
+            }
+            if ( ($null -eq $ArSec) -or ($ArSec.Count -eq 0) -or ($ArSec -eq $null) ){
+                $ArSec = [FileCFG]::DefaultSecretKeys()
+            }
+            for ($i=0; $i -lt $ArSec.Count; $i++)
+            {
+                $ArSec[$i] = $ArSec[$i].ToUpper()
+            }
+                Write-Verbose "Hidden secrets"
+            <# спрятать все значения ключей начинающихся (регистронезависимое сравнение) с:
+                1) secret
+                2) token
+                3) password
+                4) hidden
+            #>
+            if ([avvBase]::isCompositeTypeStatic($Source.Value)) {
+                (Get-Member -InputObject $Source.Value -MemberType Properties) | ForEach-Object {
+                    #if ($_.Name.ToUpper() -eq 'SECRETKEYS') {
+                    #    $Source.Value.($_.Name) = "$($_.Name.ToUpper())"
+                    #}
+                    Write-Verbose "_ : $_"
+                    Write-Verbose "_.getType() : $_.gettype()"
+                    Write-Verbose "_.Name : $_.Name"
+                    Write-Verbose "_.Name asValue : $($Source.Value.($_.Name))"
+                    #if (-not [avvBase]::isHashtableStatic($Source)) {
+                        if ($ArSec.Contains($_.name.ToUpper())) {
+                            # надо спрятать
+                            $Source.Value.($_.Name) = "$($_.Name.ToUpper())"
+                        } else {
+                            # рекурсивный обход вниз по вложенным свойствам объекта
+                            $this.ObjectToJson(([ref]$Source.Value.($_.Name)), $HiddenSecret, $ArraySecrets)
+                        }
+                    #}
+                }
+            } else {
+                # простой тип
+                Write-Verbose "_ : $_"
+                Write-Verbose "_.Name : $_.Name"
+                Write-Verbose "_.Name asValue : $($Source.Value.($_.Name))"
+                if ($_.Name.ToUpper() -eq 'SECRETKEYS') {
+                    $Source.Value.($_.Name) = "$($_.Name.ToUpper())"
+                }
+                if ($ArSec.Contains($_.name.ToUpper())) {
+                    $Source.Value.($_.Name) = "$($_.Name.ToUpper())"
+                }
+            }
+        }
+        #$result = $Source;
+        #return $result
+    }
+
+    [String] ToJson([bool]$HiddenSecret){
+        Write-Verbose "Class FileCFG::ToJson([bool]HiddenSecret) ============================================="
+        Write-Verbose "this: $($this)"
+        Write-Verbose "HiddenSecret: $($HiddenSecret)"
+        #$th = $this
+        $th = $this.clone()
+        $th.id=[string]$th.id+"-COPY"
+
+        #return ($th | ConvertTo-Json -Depth 100);
+        $this.ObjectToJson(([ref]$th), $HiddenSecret, $null)
+        return ( $th | ConvertTo-Json -Depth 100);
+    }
+
     [String] ToJson()
     {
         Write-Verbose "Class FileCFG::ToJson() ============================================="
-        #$th = $this.clone()
-        $th = $this
-        <# спрятать все значения ключей начинающихся (регистронезависимое сравнение) с:
-            1) secret
-            2) token
-            3) password
-            4) hidden
-        #>
-
-        return ($th | ConvertTo-Json -Depth 100);
+        Write-Verbose "this: $($this)"
+        return $this.ToJson($true);
     }
+
     [String] ToJson([string]$path)
     {
+        Write-Verbose "Class FileCFG::ToJson() ============================================="
+        Write-Verbose "this: $($this)"
+        Write-Verbose "path: $($path)"
+        return $this.ToJson($path, $true);
+    }
+
+    [String] ToJson([string]$path, [bool]$HiddenSecret)
+    {
         Write-Verbose "Class FileCFG::ToJson(path) ============================================="
-        Write-Verbose "Source: $($path|ConvertTo-Json -Depth 5)"
-        #$th = $this.getSection($path).clone()
+        Write-Verbose "this: $($this)"
+        Write-Verbose "path: $($path)"
+        Write-Verbose "HiddenSecret: $($HiddenSecret)"
         $th = $this.getSection($path)
+        #$th = $this.clone().getSection($path)
         #$th = $this
         <# спрятать все значения ключей начинающихся (регистронезависимое сравнение) с:
             1) secret
@@ -700,10 +811,12 @@ Class FileCFG : avvBase {
             3) password
             4) hidden
         #>
-        return ($th | ConvertTo-Json -Depth 100);
+        #return ($th | ConvertTo-Json -Depth 100);
+        $this.ObjectToJson(([ref]$th), $HiddenSecret, $null)
+        return ( $th | ConvertTo-Json -Depth 100);
     }
-}
 
+}
 
 ### +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #    [IniCFG]
@@ -746,6 +859,10 @@ Class IniCFG : FileCFG {
     # то в [hashtable][$section][$key] будет прописано значение valueVariable.
     ###############################################################################
     [Hashtable]importInifile([string]$filename){
+        Write-Verbose "Class IniCFG::importInifile(filename) ============================================="
+        Write-Verbose "this: $($this)"
+        Write-Verbose "filename: $($filename)"
+
         ([FileCFG]$this).importInifile($filename);
         $iniObj = [ordered]@{}
         $this.isExcept(!$filename, "Not defined Filename for file configuration.")
@@ -805,6 +922,11 @@ Class IniCFG : FileCFG {
     }
     
     [Void] saveToFile([string]$filename, [bool]$isOverwrite){
+        Write-Verbose "Class IniCFG::importInifile(filename) ============================================="
+        Write-Verbose "this: $($this)"
+        Write-Verbose "filename: $($filename)"
+        Write-Verbose "isOverwrite: $($isOverwrite)"
+
         # если $this.filename = '_empty_' или пустой строке, то выход
         if (!$filename -or ($filename.ToUpper() -eq '_empty_'.ToUpper() ))
         {
@@ -895,20 +1017,40 @@ class JsonCFG : FileCFG
 {
     JsonCFG(): base()
     {
+        Write-Verbose "constructor JsonCFG::JsonCFG() ============================================="
+        Write-Verbose "this: $($this)"
     }
     JsonCFG([bool]$EaE): base($EaE)
     {
+        Write-Verbose "constructor JsonCFG::JsonCFG([bool] EaE) ============================================="
+        Write-Verbose "this: $($this)"
+        Write-Verbose "EaE: $($EaE) ============================================="
     }
     JsonCFG([string]$FN): base($FN)
     {
+        Write-Verbose "constructor JsonCFG::JsonCFG([string] FN) ============================================="
+        Write-Verbose "this: $($this)"
+        Write-Verbose "FN: $($FN) ============================================="
     }
     JsonCFG([string]$FN, [bool]$EaE): base($FN, $EaE)
     {
+        Write-Verbose "constructor JsonCFG::JsonCFG([string] FN, [bool] EaE) ============================================="
+        Write-Verbose "this: $($this)"
+        Write-Verbose "FN: $($FN) ============================================="
+        Write-Verbose "EaE: $($EaE) ============================================="
     }
     JsonCFG([Hashtable]$CFG) : base($CFG) {
+        Write-Verbose "constructor JsonCFG::JsonCFG([Hashtable] CFG) ============================================="
+        Write-Verbose "this: $($this)"
+        Write-Verbose "CFG: $($CFG) ============================================="
     }
     JsonCFG([string]$FN, [bool]$EaE, [Hashtable]$CFG) : base ($FN, $Eae, $CFG)
     {
+        Write-Verbose "constructor JsonCFG::JsonCFG([string] FN, [bool] EaE, [Hashtable]$CFG) ============================================="
+        Write-Verbose "this: $($this)"
+        Write-Verbose "FN: $($FN) ============================================="
+        Write-Verbose "EaE: $($EaE) ============================================="
+        Write-Verbose "CFG: $($CFG) ============================================="
         <#
         if ($this.isHashtable($CFG)) { $FN = '_empty_'; }
         $this.filename = $FN;
@@ -921,6 +1063,10 @@ class JsonCFG : FileCFG
     [Hashtable]
     importInifile([string]$filename)# : base($filename)
     {
+        Write-Verbose "Class JsonCFG::importInifile(filename) ============================================="
+        Write-Verbose "this: $($this)"
+        Write-Verbose "filename: $($filename)"
+
         ([FileCFG]$this).importInifile($filename);
         $iniObj = [ordered]@{}
         if ($filename -or ($filename.ToUpper() -ne "_empty_".ToUpper()) )
@@ -944,6 +1090,11 @@ class JsonCFG : FileCFG
     [Void]
     saveToFile([string]$filename, [bool]$isOverwrite)
     {
+        Write-Verbose "Class JsonCFG::importInifile(filename) ============================================="
+        Write-Verbose "this: $($this)"
+        Write-Verbose "filename: $($filename)"
+        Write-Verbose "isOverwrite: $($isOverwrite)"
+
         # если $this.filename = '_empty_' или пустой строке, то выход
         if (!$filename -or ($filename.ToUpper() -eq '_empty_'.ToUpper() ))
         {

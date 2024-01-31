@@ -80,7 +80,8 @@
         'IsSupportedClass',
         'Get-SupportedClasses', 'Get-ImportedModules', 'Use-Modules',
         'Get-Version',
-        'Merge-Hashtable'
+        'Merge-Hashtable',
+        'Get-VerboseSession', 'Set-VerboseSession'
     )
     #FunctionsToExport = '*'
 
