@@ -122,9 +122,10 @@ Class FileCFG : avvBase {
     #   Constructors
     #################################################>
     FileCFG(){
-        Write-Verbose "Class FileCFG::FileCFG() ============================================="
+        Write-Verbose "Class FileCFG::FileCFG() ENTER: ============================================="
         $this.filename=$PSCommandPath + $this.getExtensionForClass();
         $this.initFileCFG();
+        Write-Verbose "Class FileCFG::FileCFG() EXIT: ============================================="
     }
     FileCFG([bool]$EaE){
         Write-Verbose "Class FileCFG::FileCFG(bool EaE) ============================================="
@@ -161,7 +162,7 @@ Class FileCFG : avvBase {
 
     #FileCFG([Hashtable]$CFG) : base ($CFG){
     FileCFG([Hashtable]$CFG) : base (){
-        Write-Verbose "Class FileCFG::FileCFG(Hashtable CFG) ============================================="
+        Write-Verbose "Class FileCFG::FileCFG(Hashtable CFG) ENTER:============================================="
         # входящий hashtable:
         #   @{
         #       '_obj_'           =@{} - значения для свойств объекта базового класса
@@ -201,6 +202,7 @@ Class FileCFG : avvBase {
         {
             $this.addHashtable($CFG.$keyCurrent, $this.CFG, [FlagAddHashtable]::Merge);
         }
+        Write-Verbose "Class FileCFG::FileCFG(Hashtable CFG) EXIT:============================================="
     }
 
     static[System.Collections.Generic.List[String]] DefaultSecretKeys() {

@@ -11,10 +11,13 @@ class avvBase : Object {
     <##>
     avvBase ()
     {
+        #Write-Verbose $MyInvocation
+        #Write-Verbose "avvBase::$($MyInvocation.InvocationName) ENTER: ================================================"
+        Write-Verbose "avvBase::new() ENTER: ================================================"
         $this.AddOrMerge = [FlagAddHashtable]::Merge
-        Write-Verbose "avvBase::new() ================================================"
         #Write-Verbose "Создали объект $($this.getType()) : $($this.ToString())"
         Write-Verbose "Создали объект $($this.getType())"
+        Write-Verbose "avvBase::new() EXIT: ================================================"
     }
 
     <#########################################################
@@ -28,7 +31,7 @@ class avvBase : Object {
         }
     #########################################################>
     avvBase ([Hashtable]$params) {
-        Write-Verbose "avvBase::new(params) =============================================="
+        Write-Verbose "avvBase::new(params) ENTER: =============================================="
         Write-Verbose "Создали объект $($this.getType())"
         Write-Verbose "params: $($params|ConvertTo-Json -Depth 5)"
         $this.initFromHashtable($params)
