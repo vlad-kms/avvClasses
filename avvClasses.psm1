@@ -166,6 +166,7 @@ function ConvertJSONToHash{
         [AllowNull()]
         $root
     )
+    Write-Verbose "$($MyInvocation.InvocationName) ENTER:============================================="
     $hash = @{};
     $keys = $root | Get-Member -MemberType NoteProperty | Select-Object -exp Name;
     #$keys | %{
@@ -181,6 +182,7 @@ function ConvertJSONToHash{
             $hash.add($_,$obj);
         }
     }
+    Write-Verbose "$($MyInvocation.InvocationName) EXIT:============================================="
     return $hash
 }
 
@@ -205,7 +207,7 @@ function ConvertFrom-JsonToHashtable {
     # Switch to denote that the returning object should be case sensitive
         $casesensitive
     )
-
+    Write-Verbose "$($MyInvocation.InvocationName) ENTER:============================================="
     if ([String]::IsNullOrEmpty($InputObject)) {
         $dict = @{}
     } else {
@@ -217,6 +219,7 @@ function ConvertFrom-JsonToHashtable {
             $dict = New-Object "System.Collections.Generic.Dictionary[System.String, System.Object]"($dict, [StringComparer]::OrdinalIgnoreCase)
         }
     }
+    Write-Verbose "$($MyInvocation.InvocationName) EXIT:============================================="
     return $dict
 }
 
@@ -262,8 +265,8 @@ function addHashtable {
     )
     $result = $Dest
     try {
+        Write-Verbose "$($MyInvocation.InvocationName) ENTER:============================================="
         if ($null -eq $Dest) {throw "Hashtable назначения не может быть null"}
-        Write-Verbose "============================================="
         Write-Verbose "Source:"
         Write-Verbose "$($Source | ConvertTo-Json -Depth 5)"
         Write-Verbose "Dest:"
@@ -315,11 +318,12 @@ function addHashtable {
         $result = $null
         throw $PSItem
     }
+    Write-Verbose "$($MyInvocation.InvocationName) EXIT:============================================="
     return $result
 }
 
 function Get-VerboseSession {
-    Write-Verbose "Get-VerboseSession: ======================================================="
+    Write-Verbose "$($MyInvocation.InvocationName) : ======================================================="
     return $VerbosePreference
 }
 
@@ -331,11 +335,11 @@ function Set-VerboseSession {
         $Value='Disable'
     )
     begin {
-        Write-Verbose "Set-VerboseSession begin: ====================================================="
+        Write-Verbose "$($MyInvocation.InvocationName)  BEGIN: ====================================================="
         Write-Verbose "Value: $($Value)"
     }
     process {
-        Write-Verbose "Set-VerboseSession process: ==================================================="
+        Write-Verbose "$($MyInvocation.InvocationName) PROCESS: ==================================================="
         if ($Value -eq 'Enable') {
             $VerbosePreference = "Continue"
         } else {
@@ -343,7 +347,8 @@ function Set-VerboseSession {
         }
     }
     end {
-        Write-Verbose "Merge-Hashtable end: ======================================================="
+        Write-Verbose "$($MyInvocation.InvocationName) END: ======================================================="
+        Write-Verbose "$($MyInvocation.InvocationName) EXIT: ======================================================="
     }
 }
 
@@ -357,7 +362,7 @@ function Merge-Hashtable{
         [switch] $AddOnly
     )
     begin {
-        Write-Verbose "Merge-Hashtable begin: ====================================================="
+        Write-Verbose "$($MyInvocation.InvocationName) BEGIN: ====================================================="
         Write-Verbose "Destination: $($Destination | ConvertTo-Json -Depth 100)"
         Write-Verbose "AddOnly: $($AddOnly)"
         $result = $Destination
@@ -377,8 +382,9 @@ function Merge-Hashtable{
         $result = (AddHashtable -Source $Source -Dest $result -Action:$AddOnly)
     }
     end {
-        Write-Verbose "Merge-Hashtable end: ======================================================="
+        Write-Verbose "$($MyInvocation.InvocationName) END:============================================="
         Write-Verbose "Result hashtable: $($result | ConvertTo-Json -Depth 100)"
+        Write-Verbose "$($MyInvocation.InvocationName) EXIT:============================================="
         return $result
     }
 }
@@ -418,6 +424,7 @@ function Get-ImportedModules
         [ValidateSet('Imported', 'Nested', 'All')]
         [string]$includeType='Imported'
     )
+    Write-Verbose "$($MyInvocation.InvocationName) BEGIN:============================================="
     #if ($Path -and ($Path.Substring(($Path.Length)-1, 1) -ne "$DS")) { $Path += "$($DS)" }
     if ($Path) { $Path = (Join-Path -Path $Path -ChildPath "$($DS)") }
     $listModules=(Get-ChildItem -Path "$($Path)*" -Include '*.ps1' -Name)
@@ -441,6 +448,7 @@ function Get-ImportedModules
             $loadedModules += $_.Name;
         })
     }
+    Write-Verbose "$($MyInvocation.InvocationName) BEGIN:============================================="
     return $loadedModules
 }
 
