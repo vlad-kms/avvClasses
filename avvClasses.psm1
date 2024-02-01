@@ -1,4 +1,4 @@
-#. .\classes\classLogger.ps1
+﻿#. .\classes\classLogger.ps1
 
 function Get-InfoModule{
 <#
