@@ -1,6 +1,6 @@
-**.idea
-/*.ini
-/*.cfg
-*.iml
-**.vscode
-**.code-workspace
+**/.idea
+**/*.ini
+**/*.cfg
+**/*.iml
+**/.vscode
+**/*.code-workspace
