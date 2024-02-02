@@ -102,6 +102,17 @@ function Hashtable2Params([Hashtable]$ht)
     } else {$ts='qwerty TYPE'};
     return $ts;
 }
+
+<#
+    .SYNOPSIS
+    Создать экземпляр класса базового типа [avvBase]
+    .PARAMETER ClassName
+    Имя класса. Может быть одним из поддерживаемых.
+    Список которых можно получить, используя команду Get-SupportedClasses
+    .PARAMETER Params
+    Для передачи параметров в конструктор класса.
+    В зависимости от значения этого параметра, разная реализация вызова конструктора класса:
+#>
 function Get-AvvClass {
     param (
         [Parameter(Mandatory=$True, Position=0, ValueFromPipeline=$True)]
