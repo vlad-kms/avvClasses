@@ -102,6 +102,17 @@ function Hashtable2Params([Hashtable]$ht)
     } else {$ts='qwerty TYPE'};
     return $ts;
 }
+
+<#
+    .SYNOPSIS
+    Создать экземпляр класса базового типа [avvBase]
+    .PARAMETER ClassName
+    Имя класса. Может быть одним из поддерживаемых.
+    Список которых можно получить, используя команду Get-SupportedClasses
+    .PARAMETER Params
+    Для передачи параметров в конструктор класса.
+    В зависимости от значения этого параметра, разная реализация вызова конструктора класса:
+#>
 function Get-AvvClass {
     param (
         [Parameter(Mandatory=$True, Position=0, ValueFromPipeline=$True)]
@@ -166,6 +177,7 @@ function ConvertJSONToHash{
         [AllowNull()]
         $root
     )
+    Write-Verbose "$($MyInvocation.InvocationName) ENTER:============================================="
     $hash = @{};
     $keys = $root | Get-Member -MemberType NoteProperty | Select-Object -exp Name;
     #$keys | %{
@@ -181,6 +193,7 @@ function ConvertJSONToHash{
             $hash.add($_,$obj);
         }
     }
+    Write-Verbose "$($MyInvocation.InvocationName) EXIT:============================================="
     return $hash
 }
 
@@ -205,7 +218,7 @@ function ConvertFrom-JsonToHashtable {
     # Switch to denote that the returning object should be case sensitive
         $casesensitive
     )
-
+    Write-Verbose "$($MyInvocation.InvocationName) ENTER:============================================="
     if ([String]::IsNullOrEmpty($InputObject)) {
         $dict = @{}
     } else {
@@ -217,6 +230,7 @@ function ConvertFrom-JsonToHashtable {
             $dict = New-Object "System.Collections.Generic.Dictionary[System.String, System.Object]"($dict, [StringComparer]::OrdinalIgnoreCase)
         }
     }
+    Write-Verbose "$($MyInvocation.InvocationName) EXIT:============================================="
     return $dict
 }
 
@@ -251,7 +265,7 @@ function Get-Version{
         -Action  отсутствует: добавить отсутствующие и изменить существующие (Key, Value)
  #>
 
-function addHashtable {
+function Add-Hashtable {
     [CmdletBinding()]
     Param(
         [Parameter(Position=0, Mandatory=$True)]
@@ -260,66 +274,71 @@ function addHashtable {
         [hashtable] $Dest,
         [switch] $Action
     )
-    $result = $Dest
+    Write-Verbose "$($MyInvocation.InvocationName) ENTER:============================================="
     try {
-        if ($null -eq $Dest) {throw "Hashtable назначения не может быть null"}
-        Write-Verbose "============================================="
-        Write-Verbose "Source:"
-        Write-Verbose "$($Source | ConvertTo-Json -Depth 5)"
-        Write-Verbose "Dest:"
-        Write-Verbose "$($Dest | ConvertTo-Json -Depth 5)"
-        Write-Verbose "Action: $($Action)"
-        foreach($Key in $Source.Keys) {
-            if ($Dest.ContainsKey($Key)) {
-                # ключ есть в объекте назначения
-                Write-Verbose "Ключ $($Key) ЕСТЬ в Dest"
-                if ($Action) { # AddOnly
-                    Write-Verbose "В hashtable Dest есть ключ $Key. Флаг Action = $Action. Тип значения ключа: $($Dest.$Key.GetType())"
-                    if ( (Get-IsHashtable -Value $Dest.$Key) -and (Get-IsHashtable -Value $Source.$Key) ) {
-                        # Dest.Key и Source.Key имеют тип Hashtable
-                        Write-Verbose "Рекурсивный вызов с Source.$($Key),  Dest.$($Key), $Action"
-                        $result=addHashtable -Source $Source.$Key -Dest $Dest.$Key -Action:$Action
-                    }
-                } else { # Merge)
-                    Write-Verbose "В hashtable Dest есть ключ $Key. Флаг Action = $Action. Тип значения ключа: $($Dest.$Key.GetType())"
-                    #if ($this.isCompositeType($Dest.$Key) -and $this.isCompositeType($Source.$Key)) {
-                    if ( (Get-IsHashtable -Value $Dest.$Key) -and (Get-IsHashtable -Value $Source.$Key) ) {
-                        # Dest.Key и Source.Key имеют тип Hashtable
-                        Write-Verbose "Рекурсивный вызов с Source.$($Key),  Dest.$($Key), $Action"
-                        $result=addHashtable -Source $Source.$Key -Dest $Dest.$Key -Action:$Action
-                    } else {
-                        Write-Verbose "Записали в                                          : Dest.$($Key) = $($Source.$Key)"
-                        $Dest.$Key = $Source.$Key
-                    }
-                } ### if ($Action)
-            } else {
-                # ключа нет в объекте назначения
-                Write-Verbose "Ключа $($key) нет в Dest"
-                if ( (Get-isHashtable -Value $Dest) ) {
-                    # добавить к Hashtable
-                    Write-Verbose "Добавить к Hashtable                                : Dest.$($Key) = $($Source.$key)"
-                    $Dest.Add($key, $Source.$key)
-                <#
-                } elseif ( $this.isObject($Dest) ) {
-                    Write-Verbose "Add-Member к типам Object, PSObject, PSCustomObject : Dest.$($Key) = $($Source.$Key)"
-                    $Dest | Add-Member -NotePropertyName $key -NotePropertyValue $Source.$key
-                #>
+        $result = $Dest
+        try {
+            if ($null -eq $Dest) {throw "Hashtable назначения не может быть null"}
+            Write-Verbose "Source:"
+            Write-Verbose "$($Source | ConvertTo-Json -Depth 5)"
+            Write-Verbose "Dest:"
+            Write-Verbose "$($Dest | ConvertTo-Json -Depth 5)"
+            Write-Verbose "Action: $($Action)"
+            foreach($Key in $Source.Keys) {
+                if ($Dest.ContainsKey($Key)) {
+                    # ключ есть в объекте назначения
+                    Write-Verbose "Ключ $($Key) ЕСТЬ в Dest"
+                    if ($Action) { # AddOnly
+                        Write-Verbose "В hashtable Dest есть ключ $Key. Флаг Action = $Action. Тип значения ключа: $($Dest.$Key.GetType())"
+                        if ( (Get-IsHashtable -Value $Dest.$Key) -and (Get-IsHashtable -Value $Source.$Key) ) {
+                            # Dest.Key и Source.Key имеют тип Hashtable
+                            Write-Verbose "Рекурсивный вызов с Source.$($Key),  Dest.$($Key), $Action"
+                            $result=Add-Hashtable -Source $Source.$Key -Dest $Dest.$Key -Action:$Action
+                        }
+                    } else { # Merge)
+                        Write-Verbose "В hashtable Dest есть ключ $Key. Флаг Action = $Action. Тип значения ключа: $($Dest.$Key.GetType())"
+                        #if ($this.isCompositeType($Dest.$Key) -and $this.isCompositeType($Source.$Key)) {
+                        if ( (Get-IsHashtable -Value $Dest.$Key) -and (Get-IsHashtable -Value $Source.$Key) ) {
+                            # Dest.Key и Source.Key имеют тип Hashtable
+                            Write-Verbose "Рекурсивный вызов с Source.$($Key),  Dest.$($Key), $Action"
+                            $result=Add-Hashtable -Source $Source.$Key -Dest $Dest.$Key -Action:$Action
+                        } else {
+                            Write-Verbose "Записали в                                          : Dest.$($Key) = $($Source.$Key)"
+                            $Dest.$Key = $Source.$Key
+                        }
+                    } ### if ($Action)
                 } else {
-                    Write-Verbose "Не можем добавить $($Key) к Dest типа $($Dest.GetType())"
+                    # ключа нет в объекте назначения
+                    Write-Verbose "Ключа $($key) нет в Dest"
+                    if ( (Get-isHashtable -Value $Dest) ) {
+                        # добавить к Hashtable
+                        Write-Verbose "Добавить к Hashtable                                : Dest.$($Key) = $($Source.$key)"
+                        $Dest.Add($key, $Source.$key)
+                    <#
+                    } elseif ( $this.isObject($Dest) ) {
+                        Write-Verbose "Add-Member к типам Object, PSObject, PSCustomObject : Dest.$($Key) = $($Source.$Key)"
+                        $Dest | Add-Member -NotePropertyName $key -NotePropertyValue $Source.$key
+                    #>
+                    } else {
+                        Write-Verbose "Не можем добавить $($Key) к Dest типа $($Dest.GetType())"
+                    }
                 }
             }
+            $result=$Dest
         }
-        $result=$Dest
+        catch {
+            $result = $null
+            throw $PSItem
+        }
+        return $result
     }
-    catch {
-        $result = $null
-        throw $PSItem
+    finally {
+        Write-Verbose "$($MyInvocation.InvocationName) EXIT:============================================="
     }
-    return $result
 }
 
 function Get-VerboseSession {
-    Write-Verbose "Get-VerboseSession: ======================================================="
+    Write-Verbose "$($MyInvocation.InvocationName) : ======================================================="
     return $VerbosePreference
 }
 
@@ -331,11 +350,11 @@ function Set-VerboseSession {
         $Value='Disable'
     )
     begin {
-        Write-Verbose "Set-VerboseSession begin: ====================================================="
+        Write-Verbose "$($MyInvocation.InvocationName)  BEGIN: ====================================================="
         Write-Verbose "Value: $($Value)"
     }
     process {
-        Write-Verbose "Set-VerboseSession process: ==================================================="
+        Write-Verbose "$($MyInvocation.InvocationName) PROCESS: ==================================================="
         if ($Value -eq 'Enable') {
             $VerbosePreference = "Continue"
         } else {
@@ -343,7 +362,8 @@ function Set-VerboseSession {
         }
     }
     end {
-        Write-Verbose "Merge-Hashtable end: ======================================================="
+        Write-Verbose "$($MyInvocation.InvocationName) END: ======================================================="
+        Write-Verbose "$($MyInvocation.InvocationName) EXIT: ======================================================="
     }
 }
 
@@ -357,7 +377,7 @@ function Merge-Hashtable{
         [switch] $AddOnly
     )
     begin {
-        Write-Verbose "Merge-Hashtable begin: ====================================================="
+        Write-Verbose "$($MyInvocation.InvocationName) BEGIN: ====================================================="
         Write-Verbose "Destination: $($Destination | ConvertTo-Json -Depth 100)"
         Write-Verbose "AddOnly: $($AddOnly)"
         $result = $Destination
@@ -371,14 +391,15 @@ function Merge-Hashtable{
             [hashtable]$src=$Source
         }
         Write-Verbose "Source (src): $($src | ConvertTo-Json -Depth 100)"
-        $result = (AddHashtable -Source $src -Dest $result -Action:$AddOnly)
+        $result = (Add-Hashtable -Source $src -Dest $result -Action:$AddOnly)
         #>
         Write-Verbose "Source : $($Source | ConvertTo-Json -Depth 100)"
-        $result = (AddHashtable -Source $Source -Dest $result -Action:$AddOnly)
+        $result = (Add-Hashtable -Source $Source -Dest $result -Action:$AddOnly)
     }
     end {
-        Write-Verbose "Merge-Hashtable end: ======================================================="
+        Write-Verbose "$($MyInvocation.InvocationName) END:============================================="
         Write-Verbose "Result hashtable: $($result | ConvertTo-Json -Depth 100)"
+        Write-Verbose "$($MyInvocation.InvocationName) EXIT:============================================="
         return $result
     }
 }
@@ -418,6 +439,7 @@ function Get-ImportedModules
         [ValidateSet('Imported', 'Nested', 'All')]
         [string]$includeType='Imported'
     )
+    Write-Verbose "$($MyInvocation.InvocationName) BEGIN:============================================="
     #if ($Path -and ($Path.Substring(($Path.Length)-1, 1) -ne "$DS")) { $Path += "$($DS)" }
     if ($Path) { $Path = (Join-Path -Path $Path -ChildPath "$($DS)") }
     $listModules=(Get-ChildItem -Path "$($Path)*" -Include '*.ps1' -Name)
@@ -441,6 +463,7 @@ function Get-ImportedModules
             $loadedModules += $_.Name;
         })
     }
+    Write-Verbose "$($MyInvocation.InvocationName) BEGIN:============================================="
     return $loadedModules
 }
 
@@ -501,3 +524,5 @@ $ic.foreach({
     . "$($pathModules)$_"
 })
 #>
+
+#Get-avvClass -ClassName JsonCFG -Params @{_new_=@{Filename="E:\!my-configs\configs\src\dns-api\config.json";ErrorAsException=$true}} -Verbose
