@@ -1,4 +1,4 @@
-﻿using module '.\avvBase.ps1';
+﻿#using module '.\avvBase.ps1';
 
 #using module "D:\Tools\~scripts.ps\avvClasses\classes\avvBase.ps1";
 #. "D:\Tools\~scripts.ps\avvClasses\classes\avvBase.ps1";

@@ -11,13 +11,14 @@ class avvBase : Object {
     <##>
     avvBase ()
     {
-        #Write-Verbose $MyInvocation
-        #Write-Verbose "avvBase::$($MyInvocation.InvocationName) ENTER: ================================================"
         Write-Verbose "avvBase::new() ENTER: ================================================"
-        $this.AddOrMerge = [FlagAddHashtable]::Merge
-        #Write-Verbose "Создали объект $($this.getType()) : $($this.ToString())"
-        Write-Verbose "Создали объект $($this.getType())"
-        Write-Verbose "avvBase::new() EXIT: ================================================"
+        try {
+            $this.AddOrMerge = [FlagAddHashtable]::Merge
+            Write-Verbose "Создали объект $($this.getType().Name)"
+            }
+        finally {
+            Write-Verbose "avvBase::new() EXIT: ================================================"
+        }
     }
 
     <#########################################################
@@ -32,9 +33,14 @@ class avvBase : Object {
     #########################################################>
     avvBase ([Hashtable]$params) {
         Write-Verbose "avvBase::new(params) ENTER: =============================================="
-        Write-Verbose "Создали объект $($this.getType())"
-        Write-Verbose "params: $($params|ConvertTo-Json -Depth 5)"
-        $this.initFromHashtable($params)
+        try {
+            Write-Verbose "Создали объект $($this.getType())"
+            Write-Verbose "params: $($params|ConvertTo-Json -Depth 5)"
+            $this.initFromHashtable($params)
+            }
+        finally {
+            Write-Verbose "avvBase::new(params) EXIT: =============================================="
+        }
     }
 
 
@@ -46,41 +52,46 @@ class avvBase : Object {
 
     <##>
     [void]initFromHashtable([Hashtable]$params) {
-        Write-Verbose "avvBase::initFromHashtable(params) ============================================="
-        Write-Verbose "params: $($params|ConvertTo-Json -Depth 5)"
-        $keyObj = '_obj_';
-        if ( $params.Contains($keyObj))
-        {
-            foreach ($key in ($this | Get-Member -Force -MemberType Properties | Select-Object -ExpandProperty Name))
+        Write-Verbose "avvBase::initFromHashtable(params) ENTER: ============================================="
+        try {
+            Write-Verbose "params: $($params|ConvertTo-Json -Depth 5)"
+            $keyObj = '_obj_';
+            if ( $params.Contains($keyObj))
             {
-                if ($params.$keyObj.Contains($key)) {
-                    $this.$key = $params.$keyObj.$key;
+                foreach ($key in ($this | Get-Member -Force -MemberType Properties | Select-Object -ExpandProperty Name))
+                {
+                    if ($params.$keyObj.Contains($key)) {
+                        $this.$key = $params.$keyObj.$key;
+                    }
                 }
             }
-        }
-        $keyObj = '_obj_add_';
-        if ( $params.Contains($keyObj))
-        {
-            $params.$keyObj.Keys.foreach({
-                #$this[$_] = $params.$keyObj[$_];
-                #Write-Host "$($_) === $($params.$keyObj[$_]))"
-                #$this | Add-Member -MemberType NoteProperty -Name $_ -Value $params.$keyObj[$_]
-                $this | Add-Member NotePropertyName $_ -NotePropertyValue $params.$keyObj[$_]
-            })
-        }
-        $keyObj = '_obj_add_value_';
-        if ( $params.Contains($keyObj))
-        {
-            foreach ($key in ($this | Get-Member -Force -MemberType Properties | Select-Object -ExpandProperty Name))
+            $keyObj = '_obj_add_';
+            if ( $params.Contains($keyObj))
             {
-                if ($params.$keyObj.Contains($key)) {
-                    $this.$key += $params.$keyObj.$key;
+                $params.$keyObj.Keys.foreach({
+                    #$this[$_] = $params.$keyObj[$_];
+                    #Write-Host "$($_) === $($params.$keyObj[$_]))"
+                    #$this | Add-Member -MemberType NoteProperty -Name $_ -Value $params.$keyObj[$_]
+                    $this | Add-Member NotePropertyName $_ -NotePropertyValue $params.$keyObj[$_]
+                })
+            }
+            $keyObj = '_obj_add_value_';
+            if ( $params.Contains($keyObj))
+            {
+                foreach ($key in ($this | Get-Member -Force -MemberType Properties | Select-Object -ExpandProperty Name))
+                {
+                    if ($params.$keyObj.Contains($key)) {
+                        $this.$key += $params.$keyObj.$key;
+                    }
                 }
             }
+            $keyObj = '_new_';
+            if ( $params.Contains($keyObj)) {
+                $this.addHashtable($params.$keyObj, $this, $this.AddOrMerge)
+            }
         }
-        $keyObj = '_new_';
-        if ( $params.Contains($keyObj)) {
-            $this.addHashtable($params.$keyObj, $this, $this.AddOrMerge)
+        finally {
+            Write-Verbose "avvBase::initFromHashtable(params) EXIT: ============================================="
         }
     }
 
@@ -113,63 +124,69 @@ class avvBase : Object {
 
     <##>
     [bool] addHashtable([hashtable]$Source, $Dest, [FlagAddHashtable]$Action) {
-        $result = $false
+        Write-Verbose "avvBase::addHashtable(Source, Dest, Action) ENTER: ============================================="
         try {
-            if ($null -eq $Dest) {throw "Объект назначения не может быть null"}
-            Write-Verbose "avvBase::addHashtable (Source, Dest, Action) ============================================="
-            Write-Verbose "Source: $($Source)"
-            Write-Verbose "Dest: $($Dest)"
-            Write-Verbose "Action: $($Action)"
-            foreach($Key in $Source.Keys) {
-                if ($this.ExistsProperty($Dest, $Key)) {
-                    # ключ есть в объекте назначения
-                    Write-Verbose "Ключ $($Key) ЕСТЬ в Dest"
-                    switch ($Action) {
-                        ([FlagAddHashtable]::AddOnly) {
-                            Write-Verbose "В объекте Dest есть ключ $Key. Флаг Action = $Action. Тип значения ключа: $($Dest.$Key.GetType())"
-                            if ($this.isCompositeType($Dest.$Key) -and $this.isCompositeType($Source.$Key)) {
-                                # Dest.Key и Source.Key имеют тип Hashtable или avvBase
-                                Write-Verbose "Рекурсивный вызов с Source.$($Key),  Dest.$($Key), $Action"
-                                $this.addHashtable($Source.$Key, $Dest.$Key, $Action)
+            $result = $false
+            try {
+                if ($null -eq $Dest) {throw "Объект назначения не может быть null"}
+                Write-Verbose "Source: $($Source)"
+                Write-Verbose "Dest: $($Dest)"
+                Write-Verbose "Action: $($Action)"
+                foreach($Key in $Source.Keys) {
+                    if ($this.ExistsProperty($Dest, $Key)) {
+                        # ключ есть в объекте назначения
+                        Write-Verbose "Ключ $($Key) ЕСТЬ в Dest"
+                        switch ($Action) {
+                            ([FlagAddHashtable]::AddOnly) {
+                                Write-Verbose "В объекте Dest есть ключ $Key. Флаг Action = $Action. Тип значения ключа: $($Dest.$Key.GetType())"
+                                if ($this.isCompositeType($Dest.$Key) -and $this.isCompositeType($Source.$Key)) {
+                                    # Dest.Key и Source.Key имеют тип Hashtable или avvBase
+                                    Write-Verbose "Рекурсивный вызов с Source.$($Key),  Dest.$($Key), $Action"
+                                    $this.addHashtable($Source.$Key, $Dest.$Key, $Action)
+                                }
                             }
-                        }
-                        ([FlagAddHashtable]::Merge) {
-                            Write-Verbose "В объекте Dest есть ключ $Key. Флаг Action = $Action. Тип значения ключа: $($Dest.$Key.GetType())"
-                            if ($this.isCompositeType($Dest.$Key) -and $this.isCompositeType($Source.$Key)) {
-                                # Dest.Key и Source.Key имеют тип Hashtable или avvBase
-                                Write-Verbose "Рекурсивный вызов с Source.$($Key),  Dest.$($Key), $Action"
-                                $this.addHashtable($Source.$Key, $Dest.$Key, $Action)
-                            } else {
-                                Write-Verbose "Записали в                                          : Dest.$($Key) = $($Source.$Key)"
-                                $Dest.$Key = $Source.$Key
+                            ([FlagAddHashtable]::Merge) {
+                                Write-Verbose "В объекте Dest есть ключ $Key. Флаг Action = $Action. Тип значения ключа: $($Dest.$Key.GetType())"
+                                if ($this.isCompositeType($Dest.$Key) -and $this.isCompositeType($Source.$Key)) {
+                                    # Dest.Key и Source.Key имеют тип Hashtable или avvBase
+                                    Write-Verbose "Рекурсивный вызов с Source.$($Key),  Dest.$($Key), $Action"
+                                    $this.addHashtable($Source.$Key, $Dest.$Key, $Action)
+                                } else {
+                                    Write-Verbose "Записали в                                          : Dest.$($Key) = $($Source.$Key)"
+                                    $Dest.$Key = $Source.$Key
+                                }
                             }
-                        }
-                        Default {
-                            throw "Неверное значения $($Action)"
-                        }
-                    } ### switch ($Action) {
-                } else {
-                    # ключа нет в объекте назначения
-                    Write-Verbose "Ключа $($key) нет в Dest"
-                    if ( $this.isHashtable($Dest)) {
-                        # добавить к Hashtable
-                        Write-Verbose "Добавить к Hashtable                                : Dest.$($Key) = $($Source.$key)"
-                        $Dest.Add($key, $Source.$key)
-                    #} elseif ( ($Dest -is [Object]) -or ($Dest -is [PSObject]) -or ($Dest -is [PSCustomObject]) ) {
-                    } elseif ( $this.isObject($Dest) ) {
-                        Write-Verbose "Add-Member к типам Object, PSObject, PSCustomObject : Dest.$($Key) = $($Source.$Key)"
-                        $Dest | Add-Member -NotePropertyName $key -NotePropertyValue $Source.$key
+                            Default {
+                                throw "Неверное значения $($Action)"
+                            }
+                        } ### switch ($Action) {
                     } else {
-                        Write-Verbose "Не можем добавить $($Key) к Dest типа $($Dest.GetType())"
+                        # ключа нет в объекте назначения
+                        Write-Verbose "Ключа $($key) нет в Dest"
+                        if ( $this.isHashtable($Dest)) {
+                            # добавить к Hashtable
+                            Write-Verbose "Добавить к Hashtable                                : Dest.$($Key) = $($Source.$key)"
+                            $Dest.Add($key, $Source.$key)
+                        #} elseif ( ($Dest -is [Object]) -or ($Dest -is [PSObject]) -or ($Dest -is [PSCustomObject]) ) {
+                        } elseif ( $this.isObject($Dest) ) {
+                            Write-Verbose "Add-Member к типам Object, PSObject, PSCustomObject : Dest.$($Key) = $($Source.$Key)"
+                            $Dest | Add-Member -NotePropertyName $key -NotePropertyValue $Source.$key
+                        } else {
+                            Write-Verbose "Не можем добавить $($Key) к Dest типа $($Dest.GetType())"
+                        }
                     }
                 }
+                $result=$True
             }
-            $result=$True
+            catch {
+                $result = $false
+            }
+            return $result
+            }
+        finally {
+            <#Do this after the try block regardless of whether an exception occurred or not#>
+            Write-Verbose "avvBase::addHashtable(Source, Dest, Action) EXIT: ============================================="
         }
-        catch {
-            $result = $false
-        }
-        return $result
     }
 
     <#
@@ -186,10 +203,15 @@ class avvBase : Object {
     <##>
      [String] ToJson()
     {
-        Write-Verbose "avvBase::ToJson() ============================================="
-        Write-Verbose "$($this) ============================================="
-        return ($this | ConvertTo-Json -Depth 100);
-        #return  ObjectToJson($this, $true);
+        Write-Verbose "avvBase::ToJson() ENTER: ============================================="
+        try {
+            Write-Verbose "$($this) ============================================="
+            return ($this | ConvertTo-Json -Depth 100);
+            #return  ObjectToJson($this, $true);
+            }
+        finally {
+            Write-Verbose "avvBase::ToJson() EXIT: ============================================="
+        }
     }
 
     <##>
@@ -237,27 +259,44 @@ class avvBase : Object {
 
     <# Клонировать текущий объект #>
     [avvBase] clone() {
-        Write-Verbose "avvBase::clone () ============================================="
-        return [avvBase]::copyFrom($this)
-        <#
-        $typeObj = $this.getType()
-        $res = [System.Management.Automation.PSSerializer]::Serialize($this,999)
-        $result=([System.Management.Automation.PSSerializer]::Deserialize($res) -as $typeObj)
-        return $result
-        #>
+        Write-Verbose "avvBase::clone () ENTER: ============================================="
+        try {
+            return [avvBase]::copyFrom($this)
+            <#
+            $typeObj = $this.getType()
+            $res = [System.Management.Automation.PSSerializer]::Serialize($this,999)
+            $result=([System.Management.Automation.PSSerializer]::Deserialize($res) -as $typeObj)
+            return $result
+            #>
+            }
+        finally {
+            Write-Verbose "avvBase::clone () EXIT: ============================================="
+        }
     }
+
     [avvBase] copy() {
-        Write-Verbose "avvBase::copy () ============================================="
-        return $this.clone()
+        Write-Verbose "avvBase::copy () ENTER: ============================================="
+        try {
+            return $this.clone()
+        }
+        finally {
+            Write-Verbose "avvBase::copy () EXIT: ============================================="
+        }
     }
+
     <# Клонировать любой объект #>
     static [System.Object] copyFrom([Object] $Source) {
-        Write-Verbose "avvBase::copyFrom (Source) ============================================="
-        Write-Verbose "$($Source) ============================================="
-        #Write-Verbose "Source: $($Source|ConvertTo-Json -Depth 5)"
-        $typeObj = $Source.getType()
-        $res = [System.Management.Automation.PSSerializer]::Serialize($Source,999)
-        $result=([System.Management.Automation.PSSerializer]::Deserialize($res) -as $typeObj)
-        return $result
+        Write-Verbose "avvBase::copyFrom (Source) ENTER: ============================================="
+        try {
+            Write-Verbose "$($Source) ============================================="
+            #Write-Verbose "Source: $($Source|ConvertTo-Json -Depth 5)"
+            $typeObj = $Source.getType()
+            $res = [System.Management.Automation.PSSerializer]::Serialize($Source,999)
+            $result=([System.Management.Automation.PSSerializer]::Deserialize($res) -as $typeObj)
+            return $result
+            }
+        finally {
+            Write-Verbose "avvBase::copyFrom (Source) EXIT: ============================================="
+        }
     }
 }
