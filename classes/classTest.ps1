@@ -7,6 +7,9 @@
     # Т.е. переопределять все (в данном случае два из avvBase.
     avvTest () : base (){}
     avvTest ([Hashtable]$p) : base ($p){}
+    avvTest ([String]$p) : base (){
+        $this.f1 = $p
+    }
 }
 
 $qwerty="qwqwqw"

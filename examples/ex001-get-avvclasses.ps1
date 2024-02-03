@@ -3,4 +3,5 @@ import-module D:\Tools\~scripts.ps\avvClasses\avvClasses
 #. D:\Tools\~scripts.ps\avvClasses\classes\classCFG.ps1
 
 #(get-avvClass -ClassName JsonCFG -Params @{_new_=@{Filename="E:\!my-configs\configs\src\dns-api\config.json";ErrorAsException=$true}} -Verbose)
-(get-avvClass -ClassName avvTest -Verbose)
+#(get-avvClass -ClassName avvTest -Verbose)
+(Get-AvvClass -ClassName avvTest -Params @{"constructor"=@{"param0"=@{"type"="string"; "value"="E:\!my-configs\configs\src\dns-api\config.json"}}} -Verbose)|ConvertTo-Json -Depth 100
