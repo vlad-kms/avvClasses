@@ -6,8 +6,8 @@
 class avvBase : Object {
 #class avvBase : PSCustomObject {
     hidden [FlagAddHashtable] $AddOrMerge
-    hidden [string] $id
-
+    hidden [string] $id=""
+    #[string] $id
     <##>
     avvBase ()
     {
@@ -29,6 +29,7 @@ class avvBase : Object {
     #########################################################>
     avvBase ([Hashtable]$params) {
         Write-Verbose "avvBase::new(params) ENTER: =============================================="
+        $this.AddOrMerge = [FlagAddHashtable]::Merge
         Write-Verbose "Создали объект $($this.getType())"
         Write-Verbose "params: $($params|ConvertTo-Json -Depth 5)"
         $this.initFromHashtable($params)
@@ -49,9 +50,11 @@ class avvBase : Object {
         $keyObj = '_obj_';
         if ( $params.Contains($keyObj))
         {
+            Write-Verbose "В $params есть key '_obj_'"
             foreach ($key in ($this | Get-Member -Force -MemberType Properties | Select-Object -ExpandProperty Name))
             {
                 if ($params.$keyObj.Contains($key)) {
+                    Write-Verbose "Заменим значение this.$($key) на $($params.$keyObj.$key)"
                     $this.$key = $params.$keyObj.$key;
                 }
             }
@@ -59,16 +62,19 @@ class avvBase : Object {
         $keyObj = '_obj_add_';
         if ( $params.Contains($keyObj))
         {
+            Write-Verbose "В $params есть key '_obj_add_'"
             $params.$keyObj.Keys.foreach({
                 #$this[$_] = $params.$keyObj[$_];
                 #Write-Host "$($_) === $($params.$keyObj[$_]))"
                 #$this | Add-Member -MemberType NoteProperty -Name $_ -Value $params.$keyObj[$_]
-                $this | Add-Member NotePropertyName $_ -NotePropertyValue $params.$keyObj[$_]
+                Write-Verbose "Добавим в this NotePropertyName $($_) NotePropertyValue $($params.$keyObj[$_])"
+                $this | Add-Member -NotePropertyName "$($_)" -NotePropertyValue $params.$keyObj[$_]
             })
         }
         $keyObj = '_obj_add_value_';
         if ( $params.Contains($keyObj))
         {
+            Write-Verbose "В $params есть key '_obj_add_value_'"
             foreach ($key in ($this | Get-Member -Force -MemberType Properties | Select-Object -ExpandProperty Name))
             {
                 if ($params.$keyObj.Contains($key)) {
@@ -78,6 +84,7 @@ class avvBase : Object {
         }
         $keyObj = '_new_';
         if ( $params.Contains($keyObj)) {
+            Write-Verbose "В $params есть key '_new_'"
             $this.addHashtable($params.$keyObj, $this, $this.AddOrMerge)
         }
         Write-Verbose "avvBase::initFromHashtable(params) EXIT: ============================================="
