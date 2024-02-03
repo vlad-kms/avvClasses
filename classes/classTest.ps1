@@ -8,3 +8,8 @@
     avvTest () : base (){}
     avvTest ([Hashtable]$p) : base ($p){}
 }
+
+$qwerty="qwqwqw"
+$qwerty+="asd"
+
+#Export-ModuleMember -Function * -Variable *
