@@ -12,7 +12,7 @@
     RootModule = 'avvClasses.psm1'
 
     # Номер версии данного модуля.
-    ModuleVersion = '2.2.0'
+    ModuleVersion = '4.0.0'
 
     # Поддерживаемые выпуски PSEditions
     # CompatiblePSEditions = @()
@@ -27,7 +27,7 @@
     CompanyName = 'Home'
 
     # Заявление об авторских правах на модуль
-    Copyright = '(c) 2022 Alexeev Vladimir. Все права защищены.'
+    Copyright = '(c) 2022-2024 Alexeev Vladimir. Все права защищены.'
 
     # Описание функций данного модуля
     # Description = ''
@@ -75,14 +75,13 @@
 
     # В целях обеспечения оптимальной производительности функции для экспорта из этого модуля не используют подстановочные знаки и не удаляют запись. Используйте пустой массив, если нет функций для экспорта.
     FunctionsToExport = @(
-        'Get-Logger', 'Get-IniCFG', 'Get-AvvClass', 'Get-InfoModule',
-        'Get-IsHashtable'
+        'Get-Logger', 'Get-IniCFG', 'Get-AvvClass',
+        'Get-IsHashtable', 'Get-InfoModule', 'Get-Version',
         'ConvertFrom-JsonToHashtable', 'ConvertJSONToHash',
-        'IsSupportedClass',
-        'Get-SupportedClasses', 'Get-ImportedModules', 'Use-Modules',
-        'Get-Version',
+        'IsSupportedClass', 'Get-SupportedClasses', 'Get-ImportedModules',
         'Merge-Hashtable',
-        'Get-VerboseSession', 'Set-VerboseSession'
+        'Get-VerboseSession', 'Set-VerboseSession',
+        'Get-PathModules', 'Use-Modules'
     )
     #FunctionsToExport = '*'
 

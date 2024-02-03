@@ -4,10 +4,8 @@ function Get-InfoModule{
 <#
     .SYNOPSIS
     Возвращает информацию о модуле avvClasses.
-    
     .DESCRIPTION
     Возвращает полную информацию о модуле avvClasses.
-
     .OUTPUTS
     Name: Info
     BaseType: [System.Collections.Specialized.OrderedDictionary]
@@ -20,7 +18,6 @@ function Get-InfoModule{
         - supportedClasses'         - поддерживаемые классы во вложенных модулях
     .EXAMPLE
     Получить информацию о модуле:
-
     PS C:\Windows\system32> Get-InfoModule
 
     Name                           Value
@@ -34,11 +31,13 @@ function Get-InfoModule{
     supportedClasses               {avvBase, IniCFG, JsonCFG, Logger...}
     
 #>
-[OutputType([System.Collections.Specialized.OrderedDictionary])]
-$res=[ordered]@{}
+    [OutputType([System.Collections.Specialized.OrderedDictionary])]
+
+    $res=[ordered]@{}
     $res.Add('filenameIgnoreModule', "$($filenameIgnoreModule)")
     $res.Add('filenameSupportedClasses', "$($filenameSupportedClasses)")
-    $res.Add('pathModules', "$($pathModules)")
+    # каталог расположения модулей с классами для модуля avvClasses
+    $pathModules=Get-PathModules;    $res.Add('pathModules', "$($pathModules)")
     $res.Add('pathMain', ((Get-Module 'avvClasses').Path))
     $res.Add('importedModules', (Get-ImportedModules -Path $pathModules))
     $res.Add('nestedModules', (Get-ImportedModules -Path $pathModules -includeType 'Nested'))
@@ -117,13 +116,16 @@ function Get-AvvClass {
     param (
         [Parameter(Mandatory=$True, Position=0, ValueFromPipeline=$True)]
         [string]$ClassName,
-        [Hashtable]$Params=@{}
+        [Hashtable]$Params=$null
     )
     $isSupported = isSupportedClass -ClassName $ClassName;
     #$isSupported = $True;
     if ($isSupported)
     {
-        if ( $Params.Contains('Constructor') -and
+        if ($null -eq $Params) {
+            return Invoke-Expression -Command "[$ClassName]::new()"
+        }
+        elseif ( $Params.Contains('Constructor') -and
                 ($Params['Constructor'] -is [Hashtable]) -and
                 ($Params['Constructor'].Count -ne 0) )
         {
@@ -178,35 +180,42 @@ function ConvertJSONToHash{
         $root
     )
     Write-Verbose "$($MyInvocation.InvocationName) ENTER:============================================="
-    $hash = @{};
-    $keys = $root | Get-Member -MemberType NoteProperty | Select-Object -exp Name;
-    #$keys | %{
-    $keys | ForEach-Object{
-            $obj=$root.$($_);
-        if($obj -is [PSCustomObject])
-        {
-            $nesthash=ConvertJSONToHash $obj;
-            $hash.add($_,$nesthash);
-        }
-        else
-        {
-            $hash.add($_,$obj);
+    try {
+        $hash = @{};
+        $keys = $root | Get-Member -MemberType NoteProperty | Select-Object -exp Name;
+        #$keys | %{
+        $keys | ForEach-Object{
+                $obj=$root.$($_);
+            if($obj -is [PSCustomObject])
+            {
+                $nesthash=ConvertJSONToHash $obj;
+                $hash.add($_,$nesthash);
+            }
+            else
+            {
+                $hash.add($_,$obj);
+            }
         }
     }
-    Write-Verbose "$($MyInvocation.InvocationName) EXIT:============================================="
+    finally {
+        Write-Verbose "$($MyInvocation.InvocationName) EXIT:============================================="
+    }
     return $hash
 }
 
 function ConvertFrom-JsonToHashtable {
-    <# TODO НЕ РАБОТАЕТ, ТОЛКО первый уровень вложенности.
+    <#
     .SYNOPSIS
         Helper function to take a JSON string and turn it into a hashtable
+        TODO НЕ РАБОТАЕТ, ТОЛКО первый уровень вложенности.
     .DESCRIPTION
         The built in ConvertFrom-Json file produces as PSCustomObject that has case-insensitive keys. This means that
         if the JSON string has different keys but of the same name, e.g. 'size' and 'Size' the comversion will fail.
         Additionally to turn a PSCustomObject into a hashtable requires another function to perform the operation.
         This function does all the work in step using the JavaScriptSerializer .NET class
     #>
+
+    # TODO НЕ РАБОТАЕТ, ТОЛКО первый уровень вложенности.
 
     [CmdletBinding()]
     param(
@@ -219,18 +228,22 @@ function ConvertFrom-JsonToHashtable {
         $casesensitive
     )
     Write-Verbose "$($MyInvocation.InvocationName) ENTER:============================================="
-    if ([String]::IsNullOrEmpty($InputObject)) {
-        $dict = @{}
-    } else {
-        [void][System.Reflection.Assembly]::LoadWithPartialName("System.Web.Script.Serialization");
-        $deserializer = [System.Web.Script.Serialization.JavaScriptSerializer]::new();
-        $deserializer.MaxJsonLength = [int]::MaxValue;
-        $dict = $deserializer.Deserialize($InputObject, 'Hashtable');
-        if ($casesensitive -eq $false) {
-            $dict = New-Object "System.Collections.Generic.Dictionary[System.String, System.Object]"($dict, [StringComparer]::OrdinalIgnoreCase)
+    try {
+        if ([String]::IsNullOrEmpty($InputObject)) {
+            $dict = @{}
+        } else {
+            [void][System.Reflection.Assembly]::LoadWithPartialName("System.Web.Script.Serialization");
+            $deserializer = [System.Web.Script.Serialization.JavaScriptSerializer]::new();
+            $deserializer.MaxJsonLength = [int]::MaxValue;
+            $dict = $deserializer.Deserialize($InputObject, 'Hashtable');
+            if ($casesensitive -eq $false) {
+                $dict = New-Object "System.Collections.Generic.Dictionary[System.String, System.Object]"($dict, [StringComparer]::OrdinalIgnoreCase)
+            }
         }
+        }
+    finally {
+        Write-Verbose "$($MyInvocation.InvocationName) EXIT:============================================="
     }
-    Write-Verbose "$($MyInvocation.InvocationName) EXIT:============================================="
     return $dict
 }
 
@@ -330,15 +343,16 @@ function Add-Hashtable {
             $result = $null
             throw $PSItem
         }
-        return $result
     }
     finally {
         Write-Verbose "$($MyInvocation.InvocationName) EXIT:============================================="
     }
+    return $result
 }
 
 function Get-VerboseSession {
-    Write-Verbose "$($MyInvocation.InvocationName) : ======================================================="
+    Write-Verbose "$($MyInvocation.InvocationName) ENTER: ======================================================="
+    Write-Verbose "$($MyInvocation.InvocationName) EXIT: ======================================================="
     return $VerbosePreference
 }
 
@@ -350,11 +364,12 @@ function Set-VerboseSession {
         $Value='Disable'
     )
     begin {
-        Write-Verbose "$($MyInvocation.InvocationName)  BEGIN: ====================================================="
+        Write-Verbose "$($MyInvocation.InvocationName)  ENTER: ====================================================="
+        Write-Verbose "$($MyInvocation.InvocationName)  begin: ====================================================="
         Write-Verbose "Value: $($Value)"
     }
     process {
-        Write-Verbose "$($MyInvocation.InvocationName) PROCESS: ==================================================="
+        Write-Verbose "$($MyInvocation.InvocationName) process: ==================================================="
         if ($Value -eq 'Enable') {
             $VerbosePreference = "Continue"
         } else {
@@ -362,7 +377,7 @@ function Set-VerboseSession {
         }
     }
     end {
-        Write-Verbose "$($MyInvocation.InvocationName) END: ======================================================="
+        Write-Verbose "$($MyInvocation.InvocationName) end: ======================================================="
         Write-Verbose "$($MyInvocation.InvocationName) EXIT: ======================================================="
     }
 }
@@ -377,7 +392,8 @@ function Merge-Hashtable{
         [switch] $AddOnly
     )
     begin {
-        Write-Verbose "$($MyInvocation.InvocationName) BEGIN: ====================================================="
+        Write-Verbose "$($MyInvocation.InvocationName) ENTER: ====================================================="
+        Write-Verbose "$($MyInvocation.InvocationName) begin: ====================================================="
         Write-Verbose "Destination: $($Destination | ConvertTo-Json -Depth 100)"
         Write-Verbose "AddOnly: $($AddOnly)"
         $result = $Destination
@@ -397,7 +413,7 @@ function Merge-Hashtable{
         $result = (Add-Hashtable -Source $Source -Dest $result -Action:$AddOnly)
     }
     end {
-        Write-Verbose "$($MyInvocation.InvocationName) END:============================================="
+        Write-Verbose "$($MyInvocation.InvocationName) end:============================================="
         Write-Verbose "Result hashtable: $($result | ConvertTo-Json -Depth 100)"
         Write-Verbose "$($MyInvocation.InvocationName) EXIT:============================================="
         return $result
@@ -423,10 +439,16 @@ function IsSupportedClass()
         [Parameter(Mandatory=$True, Position=0, ValueFromPipeline=$True)]
         [string]$ClassName
     )
-    $sp = (Get-SupportedClasses);
-    for ($i=0; $i -lt $sp.Count; $i++)
-    {
-        $sp[$i] = $sp[$i].ToUpper();
+    Write-Verbose "$($MyInvocation.InvocationName) ENTER: ============================================="
+    try {
+        $sp = (Get-SupportedClasses);
+        for ($i=0; $i -lt $sp.Count; $i++)
+        {
+            $sp[$i] = $sp[$i].ToUpper();
+        }
+    }
+    finally {
+        Write-Verbose "$($MyInvocation.InvocationName) EXIT: ============================================="
     }
     return $sp.Contains($ClassName.ToUpper());
 }
@@ -439,83 +461,118 @@ function Get-ImportedModules
         [ValidateSet('Imported', 'Nested', 'All')]
         [string]$includeType='Imported'
     )
-    Write-Verbose "$($MyInvocation.InvocationName) BEGIN:============================================="
-    #if ($Path -and ($Path.Substring(($Path.Length)-1, 1) -ne "$DS")) { $Path += "$($DS)" }
-    if ($Path) { $Path = (Join-Path -Path $Path -ChildPath "$($DS)") }
-    $listModules=(Get-ChildItem -Path "$($Path)*" -Include '*.ps1' -Name)
+    Write-Verbose "$($MyInvocation.InvocationName) ENTER: ============================================="
     try
     {
-        $listIgnored=(Get-Content -Path "$($Path)$($filenameIgnoreModule)")
+        if ($Path) { $Path = (Join-Path -Path $Path -ChildPath "$($DS)") }
+        $listModules=(Get-ChildItem -Path "$($Path)*" -Include '*.ps1' -Name)
+        try
+        {
+            #$listIgnored=(Get-Content -Path "$($Path)$($filenameIgnoreModule)")
+            $listIgnored=(Get-Content -Path (Join-Path -Path $Path -ChildPath $filenameIgnoreModule))
+        }
+        catch
+        {
+            $listIgnored=@()
+        }
+        [array]$loadedModules=@();
+        if ( ($includeType -eq 'All') -or ($includeType -eq 'Imported') )
+        {
+            [array]$loadedModules += ($listModules| Where-Object { $listIgnored -notcontains $_ })
+        }
+        if ( ($includeType -eq 'All') -or ($includeType -eq 'Nested') )
+        {
+            $m = (Get-Module -Name avvClasses).NestedModules | Select-Object Name;
+            $m.foreach({
+                $loadedModules += $_.Name;
+            })
+        }
     }
-    catch
+    finally
     {
-        $listIgnored=@()
+        Write-Verbose "$($MyInvocation.InvocationName) EXIT: ============================================="
     }
-    [array]$loadedModules=@();
-    if ( ($includeType -eq 'All') -or ($includeType -eq 'Imported') )
-    {
-        [array]$loadedModules += ($listModules| Where-Object { $listIgnored -notcontains $_ })
-    }
-    if ( ($includeType -eq 'All') -or ($includeType -eq 'Nested') )
-    {
-        $m = (Get-Module -Name avvClasses).NestedModules | Select-Object Name;
-        $m.foreach({
-            $loadedModules += $_.Name;
-        })
-    }
-    Write-Verbose "$($MyInvocation.InvocationName) BEGIN:============================================="
     return $loadedModules
 }
 
-function Get-PathModules()
-{
-    $result=$Env:AVVPATHCLASSES
-    #  если AVVPATHCLASSES не существует, то будем использовать текущий каталог расположения модуля avvTypesv5,
-    if ($result) {
-        $result = (Join-Path -Path $result -ChildPath "$($DS)")
-    } else {
-        #$result = (Split-Path $psCommandPath -Parent) + "$($DS)classes"
-        $result = (Join-Path -Path $PSScriptPath -Parent "classes")
+function Get-PathModules() {
+    <#
+    .SYNOPSIS
+    Вернуть путь с которого импортирован модуль Name
+    .OUTPUTS
+    Name: pathModules
+    BaseType: [String]
+    #>
+    [CmdletBinding()]
+    [OutputType([System.String])]
+    Param(
+        [Parameter(Position=0, ValueFromPipeline=$True)]
+        [String] $Name='avvClasses',
+        [String] $ChildPath='classes',
+        [switch] $OnlyRoot
+    )
+    Write-Verbose "$($MyInvocation.InvocationName) ENTER: ============================================="
+    try {
+        $result = (Get-Module -Name $Name).Path
+        Write-Verbose "Получили Path $($result) модуля $($Name)"
+        if ($result) {
+            $result=Split-Path -Path $result -Parent
+        }
+        Write-Verbose "Получили RootPath $($result) модуля $($Name)"
+        if (-not $OnlyRoot.IsPresent) {
+            if ($result) {
+                $result = (Join-Path -Path $result -ChildPath $ChildPath)
+            } else {
+                $result = ''
+            }
+        }
+        if ($result) { $result = (Join-Path -Path $result -ChildPath "$($DS)") }
+        Write-Verbose "Result: $($result)"
     }
-    if ($result) { $result = (Join-Path -Path $result -ChildPath "$($DS)") }
-    return $result;
+    finally {
+        Write-Verbose "$($MyInvocation.InvocationName) EXIT: ============================================="
+    }
+    if ($result) {
+        return $result;
+    } else {
+        throw "Не найден модуль $($Name)"
+    }
 }
 
 function Use-Modules() {
+    [CmdletBinding()]
     Param(
         [Parameter(Position=0, ValueFromPipeline=$True)]
         [string[]]$ClassNames=@(),
         [switch]$NotForce
     )
-    # попробовать взять каталог расположения модулей с классами в переменной среды AVVPATHCLASSES
-    # если AVVPATHCLASSES не существует, то будем использовать текущий каталог расположения модуля,
-    $pathModules=Get-PathModules;
+    Write-Verbose "$($MyInvocation.InvocationName) ENTER: ============================================="
+    try {
+        # каталог расположения модулей с классами для модуля avvClasses
+        $pathModules=Get-PathModules
     
-    if ($pathModules) { $pathModules = (Join-Path -Path $pathModules -ChildPath "$($DS)") }
-    ###Write-Host $pathModules
-    $ic=Get-ImportedModules -Path $pathModules
-    $ic.foreach({
-        #. "$($pathModules)$_"
-        #Import-Module -Global (Join-Path -Path "$($pathModules)" -ChildPath $_) -Force:$(!$NotForce)
-        Import-Module (Join-Path -Path "$($pathModules)" -ChildPath $_) -Force -Global
-    })
+        $ic=Get-ImportedModules -Path $pathModules
+        $ic.foreach({
+            # работает только для сессии, но зато все работает
+            #. "$(Join-Path -Path "$($pathModules)" -ChildPath $_)"
+            #Import-Module -Global (Join-Path -Path "$($pathModules)" -ChildPath $_) -Force:$(!$NotForce)
+            # импортирует, но к типам не достучишься
+            Import-Module (Join-Path -Path "$($pathModules)" -ChildPath $_) -Global -Force:$(!$NotForce.IsPresent)
+        })
+    }
+    finally {
+        Write-Verbose "$($MyInvocation.InvocationName) EXIT: ============================================="
+    }
 }
 <#=================================================================================
 ===================================================================================
 ===================================================================================
 ===================================================================================#>
 $DS=[System.IO.Path]::DirectorySeparatorChar;
-#$global:avvVerMajor=$PSVersionTable.PSVersion.Major;
 $filenameIgnoreModule='.avvmoduleignore'
 $filenameSupportedClasses='.avvclassessupported'
 
-# попробовать взять каталог расположения модулей с классами в переменной среды AVVPATHCLASSES
-# если AVVPATHCLASSES не существует, то будем использовать текущий каталог расположения модуля,
-$pathModules=Get-PathModules;
-#Include-Module
-
 <#
-
 #if ($pathModules -and ($pathModules.Substring(($pathModules.Length)-1, 1) -ne "$DS")) { $pathModules+="$($DS)" }
 if ($pathModules) { $pathModules = (Join-Path -Path $pathModules -ChildPath "$($DS)") }
 ###Write-Host $pathModules
