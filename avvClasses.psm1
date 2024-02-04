@@ -439,32 +439,11 @@ function Get-AvvClass {
             Write-Verbose "Вызов конструктора: Invoke-Expression -Command ""[$($ClassName)]::new($parStr)"""
             return Invoke-Expression -Command "[$ClassName]::new($parStr)"
         }
-<#        elseif (
-            ($Params.Contains('_obj_') `
-                        -and
-                ($null -ne $Params['_obj_']) `
-                        -and
-                ($Params['_obj_'] -is [Hashtable])
-            )
-        )
+        else
         {
-            #
-            #    Params содержит ключ '_obj', его тип Hashtable и он не $null.
-            #    Вызов конструктора new([hashtable]$arg), причем arg д.б. вида:
-            #    @{"_obj_"=@{"p1"="v1"; "p2"=v2;...}},
-            #    где p1, p2, ... - имена полей класса, куда будут записаны значения v1, v2, ... соответсвенно.
-            #    Если p2 не существует в калссе, то это значения будет пропущено
-            #
-            Write-Verbose "Params содержит ключ '_obj_' и тип его значения [Hashtable]$arg=@{""_obj_""=@{""f1""=""v1"";""f2""=""v2""}; }."
-            Write-Verbose "Вызов конструктора: Invoke-Expression -Command ""[$($ClassName)]::new($($Params|ConvertTo-Json -Depth 100))"""
-            return Invoke-Expression -Command ("[$ClassName]::new" + '($Params)' );
-        }
-        elseif ( $null -ne $Params) {
-            Write-Verbose "Вызов конструктора: Invoke-Expression -Command ""[$($ClassName)]::new($($Params.ToString()))"""
-            return Invoke-Expression -Command ("[$ClassName]::new" + '($Params)' );
-        }
-#>        else
-        {
+            #    Params является Hashtable и он не $null.
+            #    Вызов конструктора new([hashtable]$arg), причем arg д.б. вида может содержать спец-ключи
+            #    "_obj_", "_obj_add_", "obj_add_value", "_new_"
             Write-Verbose "Params имеет тип Hashtable и передается в конструктор new([Hashtable]$Params)"
             Write-Verbose "Вызов конструктора: Invoke-Expression -Command ""[$($ClassName)]::new($($Params|ConvertTo-Json -Depth 100))"""
             return Invoke-Expression -Command ("[$ClassName]::new" + '($Params)' );
