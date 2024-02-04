@@ -3,5 +3,5 @@ import-module D:\Tools\~scripts.ps\avvClasses\avvClasses
 #. D:\Tools\~scripts.ps\avvClasses\classes\classCFG.ps1
 
 #Get-PathModules
-$p=(Get-PathModules)
+$p=(Get-PathModules -Verbose)
 $p
