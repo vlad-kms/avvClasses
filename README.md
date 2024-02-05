@@ -8,7 +8,7 @@
 Вернуть класс IniCFG
 
 #### Get-AvvClass
-#### ConvertJSONToHash
+#### ConvertPSCustomObject-ToHashtable
 #### ConvertFrom-JsonToHashtable TODO НЕ РАБОТАЕТ, ТОЛЬКО первый уровень вложенности.
 #### Get-Version
 #### Get-SupportedClasses

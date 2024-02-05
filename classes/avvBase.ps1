@@ -273,4 +273,37 @@ class avvBase : Object {
         Write-Verbose "avvBase::copyFrom (Source) EXIT: ============================================="
         return $result
     }
+
+    static [Hashtable] ConvertPSCustomObjectToHashtable([PSCustomObject]$root){
+        Write-Verbose "Class avvBase::ConvertPSCustomObjectToHashtable(root) ENTER: ============================================="
+        Write-Verbose "root ::: $(($root | ConvertTo-Json -Depth 1))"
+        $hash = [ordered]@{};
+        $keys = $root | Get-Member -MemberType NoteProperty | Select-Object -exp Name;
+        if ($null -ne $keys) {
+            Write-Verbose "keys.gettype() ::: $($keys.gettype().Name)"
+        }
+        Write-Verbose "keys.gettype() ::: $($keys)"
+        #$keys | %{
+        $keys | ForEach-Object{
+            Write-Verbose "Текущий элемент из keys ::: $($_)"
+            $obj=$root.$($_);
+            Write-Verbose "Тип текущего элемента из keys ::: $($obj.getType().Name)"
+            Write-Verbose "Значение текущего элемента ::: $($obj)"
+            if($obj -is [PSCustomObject])
+            {
+                #Write-Verbose "Тип текущего элемента из keys ::: [PSCustomObject]"
+                $nesthash=[avvBase]::ConvertPSCustomObjectToHashtable($obj);
+                $hash.add($_,$nesthash);
+            }
+            else
+            {
+                Write-Verbose "Добавить в hash ::: ($($_), $($obj))"
+                $hash.add($_,$obj);
+            }
+        }
+        Write-Verbose "return hash ::: $($hash)"
+        Write-Verbose "Class avvBase::ConvertPSCustomObjectToHashtable(root) EXIT: ============================================="
+        return $hash
+    }
+
 }
