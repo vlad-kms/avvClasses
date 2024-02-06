@@ -458,14 +458,15 @@ function Get-AvvClass {
     Write-Verbose "$($MyInvocation.InvocationName) EXIT:============================================="
 }
 
-#################### ConvertJSONToHash #########################
+#################### ConvertPSCustomObject-ToHashtable #########################
 # Конвертирует PSCustomObject в Hashtable, включая все вложенные свойства,
 # имеющие тип PSCustomObject
-function ConvertJSONToHash{
+#function ConvertJSONToHash{
+function ConvertFrom-PSCustomObjectToHashtable{
     param(
         [Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true)]
         [AllowNull()]
-        $root
+        [PSCustomObject] $root
     )
     Write-Verbose "$($MyInvocation.InvocationName) ENTER:============================================="
     $hash = @{};
@@ -475,7 +476,7 @@ function ConvertJSONToHash{
             $obj=$root.$($_);
         if($obj -is [PSCustomObject])
         {
-            $nesthash=ConvertJSONToHash $obj;
+            $nesthash=ConvertFrom-PSCustomObjectToHashtable $obj;
             $hash.add($_,$nesthash);
         }
         else
@@ -629,7 +630,7 @@ function Add-Hashtable {
 function Get-VerboseSession {
     Write-Verbose "$($MyInvocation.InvocationName) ENTER: ======================================================="
     Write-Verbose "$($MyInvocation.InvocationName) EXIT: ======================================================="
-    return $VerbosePreference
+    return $global:VerbosePreference
 }
 
 function Set-VerboseSession {
@@ -640,17 +641,16 @@ function Set-VerboseSession {
         $Value='Disable'
     )
     begin {
-        Write-Verbose "$($MyInvocation.InvocationName)  ENTER: ====================================================="
-        Write-Verbose "$($MyInvocation.InvocationName)  begin: ====================================================="
-        Write-Verbose "Value: $($Value)"
     }
     process {
-        Write-Verbose "$($MyInvocation.InvocationName) process: ==================================================="
         if ($Value -eq 'Enable') {
-            $VerbosePreference = "Continue"
+            $global:VerbosePreference = "Continue"
         } else {
-            $VerbosePreference = "SilentlyContinue"
+            $global:VerbosePreference = "SilentlyContinue"
         }
+        Write-Verbose "$($MyInvocation.InvocationName)  ENTER: ====================================================="
+        Write-Verbose "Value: $($Value)"
+        Write-Verbose "$($MyInvocation.InvocationName) process: ==================================================="
     }
     end {
         Write-Verbose "$($MyInvocation.InvocationName) end: ======================================================="

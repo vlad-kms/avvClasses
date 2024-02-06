@@ -1063,9 +1063,9 @@ class JsonCFG : FileCFG
     }
 
     [Hashtable]
-    importInifile([string]$filename)# : base($filename)
+    importInifile([string]$filename) # : base($filename)
     {
-        Write-Verbose "Class JsonCFG::importInifile(filename) ============================================="
+        Write-Verbose "Class JsonCFG::importInifile($($filename)) ENTER: ============================================="
         Write-Verbose "this: $($this)"
         Write-Verbose "filename: $($filename)"
 
@@ -1076,16 +1076,20 @@ class JsonCFG : FileCFG
             # filename не пустой и не равен '_empty'
             #$majV = $avvVersion.Major;
             $json = (Get-Content -Path $filename -Raw);
+            Write-Verbose "Содержимое файла $($filename) ::: $($json)"
             #$json = ( (Get-Content -Path $filename -Raw) | ConvertFrom-JsonToHashtable -casesensitive );
-            $majV = (Get-Version).PSVersion.Major;
+            #$majV = (Get-Version).PSVersion.Major;
+            $majV = $global:PSVersionTable.PSVersion.Major;
             if ($majV -ge 6) {
                 $iniObj = ( $json | ConvertFrom-Json -AsHashtable);
             }
             else
             {
-                $iniObj = ($json | ConvertFrom-Json | ConvertJsonToHash );
+                #$iniObj = ($json | ConvertFrom-Json | ConvertJsonToHash );
+                $iniObj = [avvBase]::ConvertPSCustomObjectToHashtable(($json | ConvertFrom-Json));
             }
         }
+        Write-Verbose "Class JsonCFG::importInifile($($filename)) EXIT: ============================================="
         return $iniObj;
     }
 

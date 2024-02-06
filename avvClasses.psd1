@@ -77,7 +77,7 @@
     FunctionsToExport = @(
         'Get-Logger', 'Get-IniCFG', 'Get-AvvClass',
         'Get-IsHashtable', 'Get-InfoModule', 'Get-Version',
-        'ConvertFrom-JsonToHashtable', 'ConvertJSONToHash',
+        'ConvertFrom-JsonToHashtable', 'ConvertFrom-PSCustomObjectToHashtable',
         'IsSupportedClass', 'Get-SupportedClasses', 'Get-ImportedModules',
         'Merge-Hashtable',
         'Get-VerboseSession', 'Set-VerboseSession',
