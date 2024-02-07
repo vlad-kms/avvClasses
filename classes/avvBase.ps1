@@ -202,10 +202,10 @@ class avvBase : Object {
 
     [String] ToJson([int]$depth)
     {
-        Write-Verbose "avvBase::ToJson() ENTER: ============================================="
+        Write-Verbose "avvBase::ToJson([int]Depth) ENTER: ============================================="
         Write-Verbose "Глубина раскрытия: $($depth)"
         #return  ObjectToJson($this, $true);
-        Write-Verbose "avvBase::ToJson() EXIT: ============================================="
+        Write-Verbose "avvBase::ToJson([int]Depth) EXIT: ============================================="
         return ($this | ConvertTo-Json -Depth $depth);
     }
 
