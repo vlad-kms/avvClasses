@@ -194,13 +194,22 @@ class avvBase : Object {
      [String] ToJson()
     {
         Write-Verbose "avvBase::ToJson() ENTER: ============================================="
-        Write-Verbose "$($this) ============================================="
+        #Write-Verbose "$($this) ============================================="
         #return  ObjectToJson($this, $true);
         Write-Verbose "avvBase::ToJson() EXIT: ============================================="
         return ($this | ConvertTo-Json -Depth 100);
     }
 
-    <##>
+    [String] ToJson([int]$depth)
+    {
+        Write-Verbose "avvBase::ToJson([int]Depth) ENTER: ============================================="
+        Write-Verbose "Глубина раскрытия: $($depth)"
+        #return  ObjectToJson($this, $true);
+        Write-Verbose "avvBase::ToJson([int]Depth) EXIT: ============================================="
+        return ($this | ConvertTo-Json -Depth $depth);
+    }
+
+<##>
     ################## isHashtable ###########################
     [bool] isHashtable($value)
     {
