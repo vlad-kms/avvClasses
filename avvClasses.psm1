@@ -831,6 +831,20 @@ $DS=[System.IO.Path]::DirectorySeparatorChar;
 $filenameIgnoreModule='.avvmoduleignore'
 $filenameSupportedClasses='.avvclassessupported'
 
+$Public = @( Get-ChildItem -Path $PSScriptRoot\Public\*.ps1 -Recurse -ErrorAction SilentlyContinue )
+$Private = @( Get-ChildItem -Path $PSScriptRoot\Private\*.ps1 -Recurse -ErrorAction SilentlyContinue )
+
+# Dot source
+foreach ($Import in @($Public + $Private)) {
+    try {
+        . $Import.fullname
+    } catch {
+        Write-Error -Message "Failed to import function $($Import.FullName): $_"
+    }
+}
+Export-ModuleMember -Function *
+Export-ModuleMember -Function $Public.Basename
+
 <#
 #if ($pathModules -and ($pathModules.Substring(($pathModules.Length)-1, 1) -ne "$DS")) { $pathModules+="$($DS)" }
 if ($pathModules) { $pathModules = (Join-Path -Path $pathModules -ChildPath "$($DS)") }
@@ -840,5 +854,3 @@ $ic.foreach({
     . "$($pathModules)$_"
 })
 #>
-
-#Get-avvClass -ClassName JsonCFG -Params @{_new_=@{Filename="E:\!my-configs\configs\src\dns-api\config.json";ErrorAsException=$true}} -Verbose

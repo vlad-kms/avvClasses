@@ -74,16 +74,16 @@
     )
 
     # В целях обеспечения оптимальной производительности функции для экспорта из этого модуля не используют подстановочные знаки и не удаляют запись. Используйте пустой массив, если нет функций для экспорта.
-    FunctionsToExport = @(
-        'Get-Logger', 'Get-IniCFG', 'Get-AvvClass',
-        'Get-IsHashtable', 'Get-InfoModule', 'Get-Version',
-        'ConvertFrom-JsonToHashtable', 'ConvertFrom-PSCustomObjectToHashtable',
-        'IsSupportedClass', 'Get-SupportedClasses', 'Get-ImportedModules',
-        'Merge-Hashtable',
-        'Get-VerboseSession', 'Set-VerboseSession',
-        'Get-PathModules', 'Use-Modules'
-    )
-    #FunctionsToExport = '*'
+    # FunctionsToExport = @(
+    #     'Get-Logger', 'Get-IniCFG', 'Get-AvvClass',
+    #     'Get-IsHashtable', 'Get-InfoModule', 'Get-Version',
+    #     'ConvertFrom-JsonToHashtable', 'ConvertFrom-PSCustomObjectToHashtable',
+    #     'IsSupportedClass', 'Get-SupportedClasses', 'Get-ImportedModules',
+    #     'Merge-Hashtable',
+    #     'Get-VerboseSession', 'Set-VerboseSession',
+    #     'Get-PathModules', 'Use-Modules'
+    # )
+    FunctionsToExport = '*'
 
     # В целях обеспечения оптимальной производительности командлеты для экспорта из этого модуля не используют подстановочные знаки и не удаляют запись. Используйте пустой массив, если нет командлетов для экспорта.
     CmdletsToExport = @()
