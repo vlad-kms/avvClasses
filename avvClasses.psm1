@@ -842,7 +842,24 @@ foreach ($Import in @($Public + $Private)) {
         Write-Error -Message "Failed to import function $($Import.FullName): $_"
     }
 }
-Export-ModuleMember -Function *
+Export-ModuleMember -Function @(
+    'ConvertFrom-JsonToHashtable',
+    'ConvertFrom-PSCustomObjectToHashtable',
+    'IsSupportedClass',
+    'Get-AvvClass',
+    'Get-ImportedModules',
+    'Get-IniCFG',
+    'Get-InfoModule',
+    'Get-IsHashtable',
+    'Get-Logger',
+    'Get-PathModules',
+    'Get-SupportedClasses',
+    'Get-VerboseSession',
+    'Get-Version',
+    'Merge-Hashtable',
+    'Set-VerboseSession',
+    'Use-Modules'
+)
 Export-ModuleMember -Function $Public.Basename
 
 <#

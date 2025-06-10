@@ -70,7 +70,8 @@
         '.\classes\avvBase.ps1',
         '.\classes\classLogger.ps1',
         '.\classes\classCFG.ps1',
-        '.\classes\classTest.ps1'
+        '.\classes\classTest.ps1',
+        '.\public\Backup-VM.ps1'
     )
 
     # В целях обеспечения оптимальной производительности функции для экспорта из этого модуля не используют подстановочные знаки и не удаляют запись. Используйте пустой массив, если нет функций для экспорта.
