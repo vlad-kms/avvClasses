@@ -87,13 +87,13 @@
     $($Name)
 "@
         if (-not [bool]$Interactive -or $PSCmdlet.ShouldContinue($BackupSCMessage, 'Резервировать данную VM?')) {
-            Write-Output "VM для резервирования: $($Name)."
-            Write-Output "Папка для резервирования: $($Destination)."
+            Write-Output "$(Get-Date -Format "yyyy-MM-dd-HH:mm:ss") === VM для резервирования: $($Name)."
+            Write-Output "$(Get-Date -Format "yyyy-MM-dd-HH:mm:ss") === Папка для резервирования: $($Destination)."
             $WhIf = [bool]$PSBoundParameters.WhatIf
             $TimeStamp = Get-Date -Format "yyyy-MM-dd-HHmm"
             # Экспорт VM
             if ([bool]$WhIf) {
-                Write-Output "RUN: Export-VM -Name $Name -Path $($Destination)\$($Name)-$($TimeStamp) -CaptureLiveState $($CaptureLiveState)"
+                Write-Output "$(Get-Date -Format "yyyy-MM-dd-HH:mm:ss") === RUN: Export-VM -Name $Name -Path $($Destination)\$($Name)-$($TimeStamp) -CaptureLiveState $($CaptureLiveState)"
             } else {
                 Export-VM -Name $Name -Path "$($Destination)\$($Name)-$($TimeStamp)" -CaptureLiveState $CaptureLiveState
             }
@@ -105,7 +105,7 @@
                 }
                 # CompressionLevel в splat аргументов.
                 if ($null -ne $CompressionLevel) {
-                    Write-Output "Степень сжатия $($CompressionLevel)."
+                    Write-Output "$(Get-Date -Format "yyyy-MM-dd-HH:mm:ss") === Степень сжатия $($CompressionLevel)."
 
                     $CompressParameters += @{
                         'CompressionLevel' = $CompressionLevel
@@ -113,15 +113,15 @@
                 }
                 # CompressionMethod в splat аргументов.
                 if ($null -ne $CompressionMethod) {
-                    Write-Output "Метод сжатия для резервирования $($CompressionMethod)."
+                    Write-Output "$(Get-Date -Format "yyyy-MM-dd-HH:mm:ss") === Метод сжатия для резервирования $($CompressionMethod)."
                     $CompressParameters += @{
                         'CompressionMethod' = $CompressionMethod
                     }
                 }
-                Write-Output 'Сжатие резервной копии в .7z archive.'
+                Write-Output '$(Get-Date -Format "yyyy-MM-dd-HH:mm:ss") === Сжатие резервной копии в .7z archive.'
                 if ([bool]$WhIf) {
-                    Write-Output "RUN: Compress-7Zip $($CompressParameters | ConvertTo-Json)"
-                    Write-Output "RUN: Remove-Item -Path $($Destination)\$($Name)-$($TimeStamp) -Force -Recurse"
+                    Write-Output "$(Get-Date -Format "yyyy-MM-dd-HH:mm:ss") === RUN: Compress-7Zip $($CompressParameters | ConvertTo-Json)"
+                    Write-Output "$(Get-Date -Format "yyyy-MM-dd-HH:mm:ss") === RUN: Remove-Item -Path $($Destination)\$($Name)-$($TimeStamp) -Force -Recurse"
                 } else {
                     # Архивирование
                     Compress-7Zip @CompressParameters
