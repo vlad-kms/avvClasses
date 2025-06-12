@@ -601,7 +601,8 @@ Class FileCFG : avvBase {
     [Object]hidden getKeyValueUseDefaultAlways([hashtable]$section, [string]$path, [string]$key)
     {
         $result=''
-        if ($section.Contains($key) -and $section[$key])
+        # if ($section.Contains($key) -and $section[$key])
+        if ($section.Contains($key) -and ($null -ne $section[$key]))
         {
             $result=$section[$key]
         }
@@ -668,7 +669,21 @@ Class FileCFG : avvBase {
     }
 
     [bool] getBool([string]$path, [string]$key) {
-        return [bool]$this.getKeyValue($path, $key)
+        $result = $this.getKeyValue($path, $key)
+        if ($result -is [int]) {
+            $result = [bool]$result
+        }
+        if ($result -is [String]) {
+            if ( ($result.ToUpper() -eq 'FALSE') -or ($result.ToUpper() -eq 'F') -or ($result -eq '') ) {
+                $result = $false
+            } else {
+                $result = $true
+            }
+        }
+        if (-not ($result -is [bool])) {
+            throw "Тип $($result.gettype()) не может быть значением [bool]"
+        }
+        return [bool]$result
     }
     [string] getString([string]$path, [string]$key) {
         return [String]$this.getKeyValue($path, $key)
