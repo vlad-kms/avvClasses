@@ -5,6 +5,7 @@ Param(
     [switch] $ReUse
 )
 
+Import-Module ./avvClasses
 Get-InfoModule
 Import-Module ( ((Get-InfoModule).pathMain | Split-Path -Parent)|Join-Path -ChildPath 'classes\avvBase.ps1' ) -Force -ErrorAction Stop
 
